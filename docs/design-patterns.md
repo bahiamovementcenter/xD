@@ -314,7 +314,7 @@ What xD takes from it:
 
 ## Proposed next ADRs
 
-1. **Plan and apply.** Plans are data with inverse operations; three-way
+1. **Plan and apply** (written: [ADR 0002](adr/0002-plan-and-apply.md)). Plans are data with inverse operations; three-way
    reconciliation against the `jd-applied` bookmark defines the plan;
    typestate enforces check before apply.
 2. **Entries as components.** The number is the entity; everything else is
