@@ -298,6 +298,112 @@ This makes them a **third kind of child**, alongside IDs and `+` children:
 already has, costs no number space, and gives tool-owned metadata a place next
 to the node it describes.
 
+## E9. `.05` as a hex-numbered slot (mandatory `+` children)
+
+Every `.05` (the AI standard zero, formal 2.1) holds nothing directly; all its
+content lives in `+` children titled with a two-digit hex number:
+
+```
+11 Me/
+└── 11.05 AI/
+    ├── + 00 Index/        reserved, mirrors .00
+    ├── + 01 Claude/
+    ├── + 02 Local model/
+    └── + 0A …/            up to + FF
+```
+
+Shorthand: `11.05+ 01`. JDex entries: `11.05+ 01 Claude`.
+
+- **JD allows it.** Extend-the-end is meant for "specific categories or IDs",
+  and one standard zero is that. JD also allows keeping everything in `+`
+  subfolders.
+- **255 slots, one byte.** `01`–`FF` fits a `uint8` (E2), with `00` kept as
+  the slot's own index, like `.00` for a category.
+- **The rule is a predicate on `.05`:** no direct files, every child matches
+  `+ [0-9A-F]{2}( label)?`, titles unique (JD's existing rule).
+- **The hex is a title, not a number.** JD's `+` children take no number, so
+  this is a naming convention inside one ID and doesn't touch formal 1.1 or 1.4.
+
+**Costs:**
+
+- **JD's own tools claim `.05`.** The standard zeros page says JD's skills and
+  MCP server "assume they have control over AC.05". A mandatory layout here
+  can collide with what they write. Check what they create before adopting
+  this.
+- **Natural sort is wrong.** Tested 2026-11-12 on `+ 01`–`+ FF`: plain `sort`
+  and `ls` are correct; `sort -V` gives `… + 3D, + 3E, + 3F, + 04, + 4A …`.
+  Graphical file managers likely show the same.
+- **A bare hex title says nothing.** Use `+ 0A Label`, not just `+ 0A`.
+
+### Proposed layout: slots and columns in one byte
+
+The low hex digit splits the range by meaning: `1`–`9` are fixed kinds of AI
+configuration (the same in every `.05`, like standard zeros), and `A`–`F` are
+six workflow columns.
+
+```
+11.05 AI/
+├── + 00 Index/
+├── + 01 Agents/             kinds of configuration
+├── + 02 Skills/
+├── + 03 Rules/
+├── + 04 …/                  up to + 09
+├── + 0A Inbox/              columns
+├── + 0B Anti-library/
+├── + 0C Backlog/
+├── + 0D To do/
+├── + 0E Doing/
+└── + 0F Done/
+```
+
+- **The high digit can name a board.** `0A`–`0F` is board 0. `1A`–`1F` could
+  be a second board (say, a publishing workflow: Draft, Edit, Review, …).
+  Whether `11`–`19` repeat the kinds or mean something else is open.
+- **Sort order, tested 2026-11-12 on `+ 00`–`+ 0F`:** plain `sort` and `ls`
+  keep hex order. `sort -V` puts `0A`–`0F` *before* `01`–`09`, so a file
+  manager would likely show the board above the slots. From `1A` on, natural
+  sort interleaves boards (see above).
+- **Labels go after a space, not in `< >`:** `+ 0A Inbox`. `< >` can't be used
+  in Windows file names and means "placeholder" in E6.
+
+**Moving a card is a folder move.** Moving a card from `+ 0C Backlog` to
+`+ 0E Doing` changes its path, which strands jd's journaled moves
+(`strands_moves`) and breaks links by path. Two ways around it:
+
+1. **Cards keep a stable identity:** each card is a work package or a `+`
+   child with its own name, and the column folder holds only a link to it.
+2. **Columns are a status, not folders:** the Org JDex already has TODO
+   keywords (`TODO`, `DOING`, `DONE`). The Kanban board becomes a view of the
+   JDex, and `0A`–`0F` become the six keyword values instead of folders.
+
+**The kinds `01`–`09`.** Fixed, so `11.05+ 02` always means "skills for
+category 11". A candidate list, taken from what agent tools already separate
+(Claude Code's `.claude/`: `agents/`, `skills/`, `commands/`, hooks, settings,
+memory; MCP server configs; `AGENTS.md`/`CLAUDE.md` rules files):
+
+| Slot | Kind | Agrees with |
+| --- | --- | --- |
+| `01` | Agents | `.claude/agents/` |
+| `02` | Skills | `.claude/skills/` |
+| `03` | Rules | `CLAUDE.md`, `AGENTS.md` |
+| `04` | Commands | `.claude/commands/` |
+| `05` | Hooks | Claude Code hooks |
+| `06` | MCP servers | `.mcp.json` |
+| `07` | Memory | Claude Code memory |
+| `08`–`09` | free | |
+
+Tools look for these at fixed dot paths, not in `+ 02 Skills`. So the `+`
+folders are where people keep them, and E8 dot entries link to them: for
+example `11..claude/skills` → `11.05+ 02 Skills`.
+
+**Overlap with JD:** `0A Inbox` duplicates the category's own `.01 Inbox`, and
+`0F Done` overlaps `.09 Archive`. Either say how they differ (this inbox
+is the agent's, `.01` is yours) or drop them from the board.
+
+**Open:** folders (1) or status (2)? The final list of kinds `01`–`09`.
+**Verdict:** the byte layout is neat. Settle JD's claim on `.05` first, then
+the folders-or-status question.
+
 ## Open
 
 1. E2 color: test whether people can see the groupings. Render one real JD
