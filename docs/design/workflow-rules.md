@@ -54,7 +54,7 @@ Either side can create, rename, archive or renumber any part of the structure. W
 | --- | --- | --- |
 | Config edit | `jd plan`, then `jd apply` | already there |
 | Command (`jd new`, `jd rename`, `jd archive`, `jd renumber`, `jd undo`) | done by the command | written by `jdncl` in the same step |
-| `jd move` of files | done by jd | not recorded: the config describes structure, not contents. A `+ REF` folder it creates is structure, so `jd plan` offers to record it |
+| `jd move` of files | done by jd | not recorded: the config describes structure, not contents. A `+` folder it creates is structure, so `jd plan` offers to record it |
 | Disk edit | already there | central layout: `jd plan` reports it and offers a step that records it. Distributed layout: the folder name already is the config, and the plan brings the JDex in line |
 
 ### `jdncl`: the one writer of the config
@@ -142,7 +142,7 @@ Work packages go into `W0009` under `'standard` and `'last_slot`, and follow the
 | Rename an ID in the config | Apply renames the folder, the JDex note and the Org heading | `strands_moves` if relevant |
 | `jd rename 11.12 Taxes` | Renames the folder and JDex entry, and `jdncl` writes the name | `strands_moves`; `rename_conflict` if the config has a different unapplied name |
 | `jd archive 11.13` | The folder moves into `11.09` (a `jd move`, so in jd's journal), the JDex note or Org subtree goes under `11.09`, and `jdncl` sets `archived = true` | `archive_partial` if the folder moved but the note didn't; `open_work_packages` |
-| Move `11.13` to category `12` | IDs don't move; the number is the place. `jd renumber 11.13 12` takes the next `12.xx`, moves the folder and its `+` folders, renames linked work packages, and leaves a JDex stub `11.13 → 12.11` under `11.09` so jd never reuses `11.13`. `jdncl` writes `"12.11" = { name = "Car", from = "11.13" }`, and `from` alone retires `11.13` | none. The same as a removal plus an addition in the config, without `from`, is `renumber_not_supported` |
+| Move `11.13` to category `12` | IDs don't move; the number is the place. `jd renumber 11.13 12` takes the next `12.xx`, moves the folder (its `+` children go with it), renames linked work packages, and leaves a JDex stub `11.13 → 12.11` under `11.09` so jd never reuses `11.13`. `jdncl` writes `"12.11" = { name = "Car", from = "11.13" }`, and `from` alone retires `11.13` | none. The same as a removal plus an addition in the config, without `from`, is `renumber_not_supported` |
 | Two folders with one number, `11.12 Tax` and `11.12 Car` | Nothing can be matched safely | error `duplicate_number` |
 | Delete `11.13 Car` by hand | As for categories | warning `deleted_on_disk` |
 
@@ -152,45 +152,35 @@ Work packages belong to the system, not to an area: they live in `W0000-9999` an
 
 | Workflow | What happens | Thrown |
 | --- | --- | --- |
-| `jd new wp` | The number comes from `work_packages.first_number` (W0011), skipping W0003 and W0009 (PR #5). `jdncl` records it | none |
+| `jd new wp` | The number comes from `work_packages.first_number` (W0011, as JD says) and goes up by 1; `W0000`–`W0010` are the work-package standard zeros and are never handed out. `jdncl` records it | none |
 | Declare `W0012` in the config | Apply creates it as `jd new wp` would, task project included. The step is one-way if the task adapter can't remove projects | `number_conflict` if a different `W0012` exists |
-| Archive `W0012` | `jd archive W0012`, or `archived = true` in the config: the folder and its `+` folders move into `W0009`, the JDex entry goes under `W0009` | `archive_partial` |
+| Archive `W0012` | `jd archive W0012`, or `archived = true` in the config: the folder moves into `W0009`, the JDex entry goes under `W0009` | `archive_partial` |
 | Rename `W0012` | `jd rename` or a config edit: the folder, the JDex entry, and the task project if the adapter can rename | `strands_moves`; `app_entry_left` if the project keeps its old name |
 | Undo `jd new wp` | Removes the folder and JDex entry, and the task project if the adapter can remove it | `app_entry_left`, with the project's link, if it can't |
-| `W0003` or `W0009` missing | The plan recreates them | none |
+| `W0009` (archive) missing | The plan recreates it as `W0009~00.09 Archive` | none |
 
-### Extend-the-end `+ REF` folders
+### Extend-the-end `+` entries
 
-A `+ REF` folder sits next to its ID in the category folder, named `11.11+ W0012` (no name between the number and `+`). It sorts right after `11.11 Passport`, because a space sorts before `+`, and `+` before the next digit. Leaving the name out matters: jd finds an ID by `11.11` or `11.11 *`, so `11.11 Passport+ W0012` would be a second `11.11` folder (`duplicate_number`), while `11.11+ W0012` is skipped by jd.
+As Johnny.Decimal defines it (johnnydecimal.com, extend-the-end): an ID can have child entries, written `11.11+ Title`. In the JDex each one is its own entry (note or Org heading) titled `11.11+ Title`, sorted below its parent. On disk it is a subfolder **inside** the ID folder, named `+ Title`, for example `11.11 Passport/+ W0012/`. `+` folders sort above the ID's other subfolders. A child takes no number, so jd's numbering never sees it, and titles must be unique within their ID. JD doesn't allow it in an expanded area.
 
 | Workflow | What happens | Thrown |
 | --- | --- | --- |
-| Rename the parent ID | Nothing to do: the `+` folder carries no name | none |
-| Renumber `11.11` to `11.12` | The plan renames every `11.11+ *` to `11.12+ *` with the ID | `number_conflict` if a `11.12+ REF` already exists |
-| Archive `11.11` | The plan moves its `+` folders into `11.09` with it | `archive_partial` if some moved and some didn't |
-| `11.11 Passport+ W0012` (name before `+`) | Looks like a second `11.11` to jd | error `duplicate_number`, with the fix `11.11+ W0012` |
-| `11.13+ X` with no `11.13` |  | warning `dangling_ref` |
-| REF names an archived ID or W number | Still valid | warning `ref_to_archived` |
+| Rename the parent ID | Nothing to do: the `+` folders are inside it, and the JDex entries carry only the number | none |
+| Renumber `11.11` to `11.12` | The `+` folders move with the ID folder; the plan renames the JDex entries `11.11+ *` to `11.12+ *` | none |
+| Archive `11.11` | The `+` folders go with the ID folder; the JDex entries `11.11+ *` go under the archive with their parent | `archive_partial` if the folder moved and the entries didn't |
+| A sibling folder `11.11+ W0012` in the category folder (the old form of this design) | The plan moves it into `11.11 …/+ W0012` | warning `plus_outside_id` |
+| Two `+ W0012` children of one ID |  | error `duplicate_number` |
+| JDex entry `11.13+ X` with no `11.13` |  | warning `dangling_ref` |
+| A child titled with a number (`+ W0012`, `+ 12.11`) that is archived | Still valid | warning `ref_to_archived` |
 | Declare one in `meta-system.ncl` | Allowed: `"11.11+ W0012" = {}` under the category, the contracts accept `+` | none |
 
-Work packages extend the same way: `W0012+ REF` sits next to `W0012~11.11 Website` in the work package area. jd finds a work package by `W0012`, `W0012 *` or `W0012~*`, so it skips `W0012+ …`, and a `W0012+` entry in the JDex doesn't change the next free number. One difference: `+` sorts before `~`, so for a work package tied to an ID the `+` folder would show just above it; the naming rule below fixes that. Archiving `W0012` moves its `+` folders into `W0009` with it, and renumbering renames them, as for IDs.
+### Work package names
 
-Every work package names its ID: `jd new wp` needs one (error `no_id` without it), and the folder, JDex entry and Org heading are `W0012~11.11 Title`. So renumbering `11.11` to `11.12` also renames each linked `W…~11.11` to `~11.12`, and archiving `11.11` while it has work packages outside `W0009` warns `open_work_packages`.
+Every work package names its ID with a tilde, as JD requires: `jd new wp` needs one (error `no_id` without it), and the folder, JDex entry and Org heading are always `W0012~11.11 Title`. So renumbering `11.11` to `11.12` also renames each linked `W…~11.11` to `~11.12`, and archiving `11.11` while it has work packages outside `W0009` warns `open_work_packages`.
 
-The `+` folder itself is `W0012+ REF`: a W number is unique, so it needs no ID. To keep it below its work package, the work package folder's `~` becomes a space while it has `+` folders (Ash, 2026-11-11):
+Work packages have no `+` children: JD doesn't define them. Inside a work package folder, use ordinary subfolders (JD suggests blocks of ten, `05 Planning` to `95 …`).
 
-| State | Work package folder | Sorts as |
-| --- | --- | --- |
-| No `W0012+` folders | `W0012~11.11 Website` (jd's own name) |  |
-| One or more `W0012+` folders | `W0012 11.11 Website` | `W0012 11.11 Website`, `W0012+ Brief`, `W0013~…` |
-
-- The plan for creating the first `W0012+` folder includes renaming `W0012~` to ` W0012  `; archiving or removing the last one renames it back. jd finds both names (`W0012 *` and `W0012~*`).
-- Only the folder changes. The JDex entry and Org heading keep `~`.
-- Each switch is a rename, so it can strand journaled `jd move`s into the work package (`strands_moves`).
-- `W0012 11.11 Website` with no `+` folder, or `W0012~…` next to one, is a warning `wp_name_form` that the next plan fixes.
-- `W0012~11.11+ REF` stays invalid: jd reads it as a second `W0012` (`duplicate_number`).
-
-**No bare work packages.** A work package folder must carry its ID: `W0012~11.11 …` or, with `+` folders, `W0012 11.11 …`. A folder named `W0012` or `W0012 Website` (no `AC.ID`) is an error `wp_without_id` in check and plan, and `jd apply` refuses to run until it is renamed. In the config, a declared work package without `id` fails evaluation with the same code.
+**No bare work packages.** A folder named `W0012` or `W0012 Website` (no `~AC.ID`) is an error `wp_without_id` in check and plan, and `jd apply` refuses to run until it is renamed. In the config, a declared work package without `id` fails evaluation with the same code.
 
 ### Org JDex (PR #5)
 
@@ -291,12 +281,12 @@ my-system/                         repo, in jj, pushed to a git remote
 │   ├── 11 Me/
 │   │   ├── 11.09 Archive/         holds the 11.13 → 12.11 stub
 │   │   ├── 11.11 Passport/
-│   │   ├── 11.11+ W0012/
+│   │   │   └── + W0012/
 │   │   └── 11.12 Website/         a git clone
 │   └── 12 Money/
 │       └── 12.11 Taxes/
 └── W0000-9999 Work packages/
-    └── W0012 11.11 Renew/         a space, not ~, while W0012+ exists
+    └── W0012~11.11 Renew/
 ```
 
 ### Distributed: a `.jd.ncl` in each folder
@@ -330,9 +320,9 @@ my-setup/                          repo, in jj
 │   │   ├── .jd.ncl                { create = { "11.13" = "Car" },
 │   │   │                            "11.12" = { name = "Website", storage = { kind = 'repo, ... } } }
 │   │   ├── 11.11 Passport/
-│   │   │   └── .jd.ncl            { }
-│   │   ├── 11.11+ W0012/
-│   │   │   └── .jd.ncl            { }
+│   │   │   ├── .jd.ncl            { }
+│   │   │   └── + W0012/
+│   │   │       └── .jd.ncl        { }
 │   │   └── 11.12 Website/         a git clone, described by its parent
 │   └── 12 Money/
 │       ├── .jd.ncl                { }
@@ -340,7 +330,7 @@ my-setup/                          repo, in jj
 │           └── .jd.ncl            { from = "11.13" }
 └── W0000-9999 Work packages/
     ├── .jd.ncl                    { }
-    └── W0012 11.11 Renew/
+    └── W0012~11.11 Renew/
         └── .jd.ncl                { tasks = { app = "org" } }
 
 ~/D25/                             a second system, same shape
@@ -427,7 +417,7 @@ systems = [
 - `owners`: jd generates the host's CODEOWNERS file from it, mapping each area to the files that define it (`areas/20-29.ncl` centrally, the folder's `.jd.ncl` files when distributed). Per-area owners also need the JDex split per area, since CODEOWNERS works on whole files; with one Org file for everything, the `"*"` owners approve every JDex change.
 - A change waiting for review exists only on your machine's branch. Nothing changes on anyone's disk, yours included, until it's merged and `jd plan` picks it up.
 
-**Numbers.** Two people can take `11.13` while offline. When the changes meet, the plan keeps the one merged first and renames the other to `11.13+ <jj change ID>` (Ash's idea; the change ID survives rebases). Nothing is lost and there's no duplicate; `jd check` warns until `jd renumber` gives it a real number.
+**Numbers.** Two people can take `11.13` while offline. When the changes meet, the plan keeps the one merged first and turns the other into a `+` child of the one kept, JDex entry `11.13+ <jj change ID>` and folder `11.13 …/+ <jj change ID>/` (Ash's idea; the change ID survives rebases). Nothing is lost and there's no duplicate; `jd check` warns until `jd renumber` gives it a real number.
 
 **Undo.** `jd undo` takes back your own last operation, from your machine's history. `jd revert <change>` reverses anyone's change by adding a new one, so nobody's history is rewritten; if `review` includes `'revert`, it goes as a pull request.
 
@@ -468,13 +458,13 @@ The rule for severity: **error** when going ahead could lose data or would have 
 | `undeclared` | warning | check, plan | On disk, in no config file; the plan offers to record it |
 | `strands_moves` | warning | plan, `jd rename` | N journaled moves will no longer be undoable by path |
 | `open_work_packages` | warning | plan, `jd archive` | Archiving an ID, category or area whose work packages aren't archived |
-| `wp_name_form` | warning | check, plan | A work package folder uses `~` next to `+` folders, or a space without them; the plan fixes it |
-| `dangling_ref` | warning | check | A `+ REF` points at a number that doesn't exist |
-| `ref_to_archived` | warning | check | A `+ REF` points at an archived number |
+| `plus_outside_id` | warning | check, plan | A `11.11+ X` folder next to its ID instead of `+ X` inside it; the plan moves it |
+| `dangling_ref` | warning | check | A `+` entry whose parent ID doesn't exist |
+| `ref_to_archived` | warning | check | A `+` child titled with a number that is archived |
 | `backend_unavailable` | warning | check, plan, `jd move` | A backend is offline; that folder and everything under it is skipped |
 | `app_entry_left` | warning | undo, rename | The task app or note app entry couldn't be changed; prints its link |
 | `jdex_name_mismatch` | info | check, plan | Folder and JDex entry disagree; the plan updates the side that didn't change |
-| `stale_ref_name` | info | check | A `+ REF` carries an old name for a renamed number |
+| `stale_ref_name` | info | check | A `+` child titled with a number carries that number's old name |
 
 ## Open questions and next steps
 
@@ -490,7 +480,7 @@ Settled:
 - **Applied record:** a jj bookmark per machine, `jd-applied/<host>`; no `applied.json`.
 - **No `cli.ncl`:** `jdncl` is the only writer of the config.
 - **Disk edits:** `jd plan` reports them and offers a step that records them; `jd apply` runs it.
-- **`+ REF` folders** are declarable in both layouts; the contracts must accept `+`.
+- **`+` entries** follow JD: JDex entry `11.11+ Title`, folder `+ Title` inside the ID; declarable in both layouts, so the contracts must accept `+`. Work packages always use `~` and have no `+` children (aligned with JD, 2026-11-12).
 - **Storage** is per folder, declared by the parent; the config repo travels, the root doesn't. A `storage` set on the system, an area or a category is the default for everything under it, and anything lower can override it. With none set, folders are plain and local, which is right for one machine; adding a second machine is one line and a `jd plan`.
 - **Archives:** four strategies, `'standard` (default), `'last_slot`, `'in_place`, `'separate_root`, chosen per system and overridable lower down.
 
@@ -500,7 +490,7 @@ Suggested order of work, each its own PR after #5:
 2. Match by number in `jd check`, add `duplicate_number`, drop `jd scaffold`. This fixes the duplicate-folder bug on its own.
 3. `jdncl`, central layout first.
 4. jj: repo setup, the per-machine bookmark, `jd plan` and `jd apply` with the saved plan and the three-way check.
-5. The `jd new` wrapper (`pending_creates`), `jd rename`, `jd archive`, `jd renumber`, with the work package naming rule and `+` folders.
+5. The `jd new` wrapper (`pending_creates`), `jd rename`, `jd archive`, `jd renumber`, with `+` entries.
 6. `jd undo` over jj and jd's journal, and adapter remove and rename functions (Org and Things first).
 7. The distributed layout: `.jd.ncl`, the generated index, `jd convert`, `pulled_rename`.
 8. Storage backends: `'dir`, `'path` and `'repo` first, then the mounts with home-manager units.
