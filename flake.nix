@@ -23,6 +23,12 @@
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
+              # The xD crates (docs/adr/0001-architecture.md)
+              cargo
+              rustc
+              clippy
+              rustfmt
+              rust-analyzer
               jujutsu
               nickel
               nushell

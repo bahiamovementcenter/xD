@@ -1,0 +1,16 @@
+[package]
+name = "xd-nickel"
+version = "0.1.0"
+description = "Loads xD configurations written in Nickel"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+xd-core = { path = "../xd-core" }
+# Pinned to a commit: nickel-embed isn't released yet.
+nickel-embed = { git = "https://github.com/bahiamovementcenter/rust-nickel", rev = "268127d" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
