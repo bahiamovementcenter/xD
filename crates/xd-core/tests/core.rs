@@ -127,6 +127,8 @@ fn invalid_schemes_are_rejected() {
     assert!(s.validate().is_err());
     let s = Scheme {
         base: 10,
+        alphabet: None,
+        range_separator: "-".into(),
         levels: vec![Level {
             name: "x".into(),
             width: 0,
@@ -297,6 +299,8 @@ fn registry_invariants() {
 fn any_scheme() -> impl Strategy<Value = Scheme> {
     (2u32..=36, 1u32..=3, 1u32..=2, any::<bool>()).prop_map(|(base, w1, w2, range)| Scheme {
         base,
+        alphabet: None,
+        range_separator: "-".into(),
         levels: vec![
             Level {
                 name: "a".into(),

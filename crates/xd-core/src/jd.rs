@@ -11,6 +11,8 @@ use crate::scheme::{Level, Scheme};
 pub fn scheme() -> Scheme {
     Scheme {
         base: 10,
+        alphabet: None,
+        range_separator: "-".into(),
         levels: vec![
             Level {
                 name: "area".into(),

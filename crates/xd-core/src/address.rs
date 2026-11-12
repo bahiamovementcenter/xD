@@ -97,8 +97,9 @@ impl Address {
         if scheme.levels[self.level()].range {
             let max = scheme.capacity(self.level() + 1) - 1;
             format!(
-                "{}-{}",
+                "{}{}{}",
                 self.child_unchecked(0).render_digits(scheme),
+                scheme.range_separator,
                 self.child_unchecked(max).render_digits(scheme)
             )
         } else {
@@ -116,11 +117,12 @@ impl Address {
     }
 
     /// The inverse of [`Address::render`]. Only the number: a label after it
-    /// is the job of [`crate::name`]. Letters are read in either case.
+    /// is the job of [`crate::name`]. With the default digits, letters are
+    /// read in either case; a custom alphabet is read exactly.
     pub fn parse(scheme: &Scheme, s: &str) -> Option<Address> {
-        // A separator never contains `-` (Scheme::validate), so a `-` always
-        // splits a range.
-        if let Some((lo, hi)) = s.split_once('-') {
+        // Digits and level separators never contain the range separator
+        // (Scheme::validate), so finding it always means a range.
+        if let Some((lo, hi)) = s.split_once(scheme.range_separator.as_str()) {
             let lo = Self::parse_digits(scheme, lo)?;
             let hi = Self::parse_digits(scheme, hi)?;
             let parent = lo.parent()?;

@@ -12,4 +12,4 @@ pub mod scheme;
 
 pub use address::{Address, AddressError};
 pub use registry::{Entry, Policy, Registry, RegistryError, Reserved};
-pub use scheme::{Level, Scheme, SchemeError};
+pub use scheme::{Level, Portability, Scheme, SchemeError, alphabets};
