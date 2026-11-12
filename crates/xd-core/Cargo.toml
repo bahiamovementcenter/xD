@@ -1,0 +1,13 @@
+[package]
+name = "xd-core"
+version = "0.1.0"
+description = "Extensible Decimal: the address space, hierarchy, entries, allocation and projections"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+proptest = "1"
