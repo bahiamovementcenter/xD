@@ -49,8 +49,16 @@ fn scheme_and_addresses() -> impl Strategy<Value = (Scheme, Vec<Address>)> {
         })
 }
 
+/// `PROPTEST_CASES` when set (the weekly CI run), otherwise `default`.
+fn cases(default: u32) -> u32 {
+    std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(200))]
+    #![proptest_config(ProptestConfig::with_cases(cases(200)))]
 
     #[test]
     fn folders_round_trip((s, addresses) in scheme_and_addresses()) {
@@ -165,4 +173,41 @@ fn base58_alphabet_works() {
     assert_eq!(id.render(&s).unwrap(), "1z.zz");
     assert_eq!(Address::parse(&s, "1z.zz"), Some(id));
     assert_eq!(Address::parse(&s, "1O.zz"), None, "no O in base58");
+}
+
+/// `portability()` is a claim about real disks: where it reports a case
+/// collision, two numbers really are one folder on a case-insensitive disk
+/// (macOS and Windows by default; CI runs this on macOS), and where it
+/// reports none, they never are.
+#[test]
+fn case_collisions_are_real_where_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir(dir.path().join("probe")).unwrap();
+    let case_insensitive = dir.path().join("PROBE").exists();
+
+    // base62: `a` (36) and `A` (10) differ only in case.
+    let s = scheme_for(62);
+    assert!(
+        s.portability()
+            .contains(&Portability::CaseCollision('A', 'a'))
+    );
+    let upper = Address::new(&s, vec![1, 1, 10]).unwrap();
+    let lower = Address::new(&s, vec![1, 1, 36]).unwrap();
+    fs::create_dir(dir.path().join(upper.render(&s).unwrap())).unwrap();
+    let second = fs::create_dir(dir.path().join(lower.render(&s).unwrap()));
+    assert_eq!(second.is_err(), case_insensitive, "{second:?}");
+
+    // base36 with the default digits reports nothing, and every number of a
+    // level gets its own folder even on a case-insensitive disk.
+    let s = scheme_for(36);
+    assert!(s.portability().is_empty());
+    let ids = tempfile::tempdir().unwrap();
+    for id in 0..s.capacity(2) {
+        let a = Address::new(&s, vec![1, 1, id]).unwrap();
+        fs::create_dir(ids.path().join(a.render(&s).unwrap())).unwrap();
+    }
+    assert_eq!(
+        fs::read_dir(ids.path()).unwrap().count(),
+        s.capacity(2) as usize
+    );
 }
