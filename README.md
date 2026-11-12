@@ -12,6 +12,14 @@ are described in [docs/jd-formal.md](docs/jd-formal.md) and
 - [`xd-core`](crates/xd-core): addresses and their hierarchy, entries, allocation and
   retirement, and folder names, generic over a numbering scheme (base and levels).
   Johnny.Decimal's scheme and standard zeros are in `xd_core::jd`.
+- [`xd-nickel`](crates/xd-nickel): loads a system's configuration from Nickel through
+  [`nickel-embed`](https://github.com/bahiamovementcenter/rust-nickel).
+
+## Nickel
+
+- [`nickel/xd.ncl`](nickel/xd.ncl): the contracts a configuration is checked against.
+- [`nickel/jd.ncl`](nickel/jd.ncl): Johnny.Decimal, the default configuration. Build on it
+  with a merge, e.g. `(import "jd.ncl") & { scheme.base | force = 16 }`.
 
 ## Development
 

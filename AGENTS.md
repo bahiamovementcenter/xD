@@ -18,6 +18,7 @@ From `nix develop`:
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+nickel format nickel/*.ncl && nickel typecheck nickel/jd.ncl   # when Nickel files change
 ```
 
 ## Commits

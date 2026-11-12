@@ -1,7 +1,8 @@
 //! Johnny.Decimal as a configuration of the core: the defaults.
 //!
-//! These will move to a Nickel configuration (ADR 0001, step 3); they live
-//! here until `nickel-embed` loads them.
+//! `nickel/jd.ncl` writes the same scheme in Nickel, and `xd-nickel`'s
+//! tests check that the two agree. Configurations build on the Nickel one;
+//! this copy keeps the core usable and testable without Nickel.
 
 use crate::address::Address;
 use crate::scheme::{Level, Scheme};
