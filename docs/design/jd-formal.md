@@ -10,6 +10,49 @@ the JD standard.
 
 ---
 
+## 0. Reading guide
+
+**The form of the notation says what something is.** The shape of a number
+gives its kind, and the symbol beside it gives its relation to something else.
+
+**Shapes: what kind of thing**
+
+| Thing | Form | Why |
+| --- | --- | --- |
+| Area | range, `10-19` | a span of categories, written as its first and last |
+| Category | integer, `11` | one point in that span; its first digit is its area |
+| ID | decimal, `11.11` | a position inside a category: category, `.` "within", slot |
+| System | letter + 2 digits, `P76` | the letter means outside the decimal tree: a namespace (2.2) |
+| Work package | letter + 4 digits, `W0011` | outside the tree too, and flat (2.4) |
+| Expanded area | area digit + anything, `20.JOE.BB` | keeps the area digit, then its own scheme (2.6) |
+
+**Zero: the level's own management**, at every level (2.1): system `00-09` /
+`00` / `00.00`, area `x0` (e.g. `10`), category `.00`–`.09`, work packages
+`W0000`–`W0010`.
+
+**Symbols: how it relates** (full table in 3.1)
+
+| Symbol | Relation | Example |
+| --- | --- | --- |
+| `-` | from … to | `10-19` |
+| `.` | inside, one level down | `11.11` |
+| `+` | a child that takes no number | `11.11+ Wendy` |
+| `~` | a link to an ID in the other tree | `W0011~11.11` |
+| ` ` | end of the number, start of the label | `11.11 Passport` |
+| `/` | one level down, on disk | `10-19 …/11 …` |
+
+Four rules:
+
+- Before the first space is identity; after it is a label you can change.
+- A number holds its own path: `11.11` contains `11` and area `1`.
+- Digits mean inside the decimal tree; a leading letter means outside it.
+- Anything that takes no number is marked by a symbol (`+`) instead.
+
+Experiments add `..` for hidden, tool-owned entries and a hex `.05` slot
+(jd-experiments.md, E8 and E9). They aren't JD.
+
+---
+
 ## 1. Core
 
 ### 1.1 Address space
