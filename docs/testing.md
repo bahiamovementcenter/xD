@@ -47,90 +47,66 @@ Rough proportion as the code grows: about 70% core, 25% seams, 5% end to
 end. `cargo test` must stay under a minute on a laptop; anything slower
 moves to a scheduled job.
 
-## Coverage today
+## The harness
 
-| Area | Tested | Kind |
+| Where | What it holds |
+| --- | --- |
+| `crates/xd-core/tests/` | examples for the core (`core.rs`), real folders for bases 2–64 (`folders.rs`), and every bug found so far, pinned by name (`regressions.rs`) |
+| `crates/xd-conformance/` | the conformance suite: generators (`strategies`) and laws (`laws`) anyone can call from their own `proptest!`, plus the suite run on generated schemes (`tests/laws.rs`) and the registry against a model (`tests/registry.rs`) |
+| `crates/xd-nickel/tests/` | loading, and the agreement test between the Nickel contracts and `Scheme::validate` (`agreement.rs`) |
+| `*.proptest-regressions` | seeds of real failures proptest found, committed so they run first |
+| `.github/workflows/ci.yml` | every check in `AGENTS.md` on Linux, `cargo test` on macOS, and a weekly run with `PROPTEST_CASES=10000` |
+
+Generated schemes cover bases 2 to 64, the default digits and base58,
+base62 and base64url alphabets (so small bases are tried case-sensitive
+too), one to five levels of width 1 to 4, five separators and both range
+separators. Anything `validate` rejects is repaired or dropped, so every law
+runs only on valid schemes.
+
+## What's covered
+
+| Promise | Test | Kind |
 | --- | --- | --- |
-| `Scheme::validate` | each error variant once | examples (`invalid_schemes_are_rejected`) |
-| Render and parse numbers (JD, hex) | yes | examples |
-| `parse(render(n)) = n` | bases 2–36, depth 1–2 levels | property |
-| Plain string order = tree order | bases 2–36 | property |
-| Real folders round trip | bases 2–64, `read_dir` | property on temp dirs |
-| Custom alphabets, base64url's `-`, base58 | yes | examples |
-| `portability()` | case collision, Windows chars | examples |
-| `name::parse` / `render` | JD folder names | examples |
-| Registry: allocate, retire, reuse, missing parent | JD system | examples |
-| `Policy::LowestFree`, full category | yes | examples |
-| `jd.ncl` equals `xd_core::jd::scheme()` | yes | differential |
-| Nickel contracts reject; Rust validation backs them up | a few cases | examples |
-| Open `System`, closed `Scheme` | yes | examples |
+| **PutGet**: `parse(render(a)) = a` | `laws::put_get` on generated schemes; every JD address exhaustively | property, exhaustive |
+| **GetPut** for folder names: a canonical name read and written back is unchanged, label included | `laws::get_put_name` | property |
+| `parse` accepts only canonical numbers (default digits: up to letter case) | `laws::parse_accepts_only_canonical` on number-like text and on rendered numbers with one edit | property |
+| Siblings' integers and names sort in tree order | `laws::sibling_order` | property |
+| Different numbers never share a folder on a case-insensitive disk unless `portability()` says so | `laws::case_safe_unless_reported`, and `case_collisions_are_real_where_reported` on the real disk (macOS in CI) | property, disk |
+| `parse` never panics; nothing panics on a validated scheme | `parse_never_panics`, `validated_schemes_are_safe` | property |
+| JD ranges parse only when exact (`10-19`, not `10-18`, `11-19`, `1`) | `jd_ranges_parse_only_when_exact` | examples |
+| Real folders round trip | `folders.rs`, bases 2–64 | property on temp dirs |
+| **Registry** (formal 1.3, 1.4): agrees with a naive model after every step of random insert/rename/retire/allocate sequences, with and without reserved numbers; active and retired never overlap; retired only grows; no orphans; allocate never hands out a used or reserved number, and what it hands out can be inserted | `registry_matches_the_model` | model-based property |
+| Allocating until full hands out every non-reserved number exactly once | `allocation_fills_a_level_exactly` | property |
+| JD allocates the first area as `10-19` | `jd_areas_are_allocated_after_the_system_area` | example |
+| Nickel contracts and `validate` agree: a scheme loads exactly when `validate` accepts it, and loads unchanged | `agreement.rs`, on valid schemes and on schemes with one thing broken | differential property |
+| `jd.ncl` is `xd_core::jd::scheme()`; open `System`, closed `Scheme` | `load.rs` | examples |
 
-Everything passes (`cargo test`: 25 tests, 4 of them property tests, about a
-second after the build).
+The tests catch real mistakes: an off-by-one in reading digits
+(`v <= base`) fails `near_misses_are_rejected_or_canonical` on every run,
+and dropping the never-reuse check or the retired record fails
+`registry_matches_the_model`.
 
-## Gaps, most important first
+## Found and fixed
 
-### Bugs found while writing this
-
-Two panics, both reproduced on this branch with a scratch test:
-
-1. **`Address::to_integer` overflows.** `Scheme::validate` caps each level
-   at 32 bits but not the sum, so base 64 with three 5-digit levels is
-   valid, and `to_integer` on its largest address panics in debug builds
-   (`attempt to multiply with overflow`, `address.rs:168`) and wraps in
-   release. Fix: either validate that the whole address fits in 64 bits, or
-   return `Option<u64>` / `u128`. Test: a property over any valid scheme
-   that `to_integer` doesn't panic and is strictly increasing in tree order
-   for one level.
-2. **`Address::render` with another scheme panics.** An `Address` doesn't
-   know its scheme, so rendering a 3-level address with a 2-level scheme
-   indexes past `levels` (`address.rs:97`). It can't happen while there is
-   one scheme per process, but it will with several systems loaded. Fix:
-   make render return `Option`, or carry a scheme id in `Address`. Test: an
-   example per mismatch.
-
-### No CI
-
-The repository has no `.github/workflows`. Nothing runs the checks in
-`AGENTS.md` on a pull request. This is the first gap to close: a workflow
-running `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`,
-`cargo test`, `nickel format --check` and `nickel typecheck` on `nickel/*.ncl`,
-and `nix flake check`, on Linux; plus `cargo test` on macOS, whose
-case-insensitive disk is the one `portability()` warns about (see below).
-
-### Core laws not yet tested
-
-| Law | Why it matters | Test |
+| Bug | Found by | Fix |
 | --- | --- | --- |
-| **GetPut**: `render(parse(name)) = name` for canonical names, and every other accepted name is reported as non-canonical | design-patterns.md adopts lenses; today `1a.1f` (hex) parses and renders as `1A.1F`, and `11.11  X` (two spaces) keeps a label starting with a space | property: generate canonical names, assert identity; generate variants (case, extra spaces), assert `parse` flags them once a `canonical` flag exists |
-| **Registry invariants under any sequence of operations**: active ∩ retired = ∅; retired only grows; every active entry's parent is active; allocate never returns an active, retired or reserved number; `AfterHighest` never goes down | the whole of formal 1.4; today only a fixed script of operations checks it | stateful property test (proptest's state machine, or a vector of random `Op`s applied to a `Registry` and a naive model, compared after each step) |
-| **Allocation fills a level exactly**: with no retirements, allocating until `Full` hands out every non-reserved number once | catches off-by-one at `capacity` | property over small schemes (base 2–4) so it finishes fast |
-| **Top-level allocation for JD skips `00-09`** | areas are allocated too | example |
-| **Parse never panics** | names come from disks and other people | fuzz `name::parse` and `Address::parse` with arbitrary UTF-8 (`cargo fuzz`, or a proptest over `any::<String>()` in the normal suite) |
-| **Validated schemes are safe**: for every scheme `validate` accepts, render, parse, capacity and `to_integer` don't panic | the overflow above slipped through because the generator only builds up to 3 small levels | widen `any_scheme()`: bases 2–64 with alphabets, 1–6 levels, widths up to the 32-bit cap, separators drawn from a safe set |
-| **Ranges**: `parse` rejects `10-18`, `10-29`, and bare area digits; accepts only a level marked `range` | the range branch has the most conditions | examples, then a property: `parse(s)` is `Some` only if `render(parse(s)) = s` modulo case |
+| `Address::to_integer` overflowed for valid schemes whose levels add up to more than 64 bits (base 64, three 5-digit levels) | reading the code for this plan | `validate` rejects such schemes (`SchemeError::TooLarge`) |
+| `Address::render` panicked for an address from another scheme | the same | `render`, `name::render` and `to_integer` return `Result`; `Address::check`; `allocate` rejects such a parent as `Invalid` |
+| A scheme with an unnamed level was valid in Rust but rejected by the Nickel contract | the agreement test | `validate` requires a name (`SchemeError::LevelName`) |
 
-### Nickel and Rust agree
+## Still open
 
-`jd.ncl` vs `jd::scheme()` is checked, but the contracts in `xd.ncl` and
-`Scheme::validate` are two definitions of "valid scheme". Add a
-**differential property**: generate schemes (valid and slightly broken),
-export each as Nickel, and assert that whatever `validate` accepts the
-contract accepts too. The reverse direction (contract accepts, `validate`
-rejects) is allowed and expected, and each such class should have a named
-example like `rust_validation_catches_what_contracts_dont`. Also: a
-misspelled field anywhere in `Level` is rejected, and error messages name
-the field (a snapshot of the error text, so a regression in diagnostics is
-seen).
-
-### Disks other than Linux ext4
-
-`folders.rs` proves round trips on the CI machine's file system only. The
-real risk is case-insensitive disks (macOS APFS by default, Windows NTFS).
-Run the folder tests on macOS in CI and add one that asserts: when
-`portability()` reports a `CaseCollision`, creating both folders really
-does collide there, and when it reports nothing, it doesn't. That turns the
-portability warnings from documentation into a checked claim.
+- **Non-canonical names aren't reported yet.** With the default digits,
+  `1a.1f` (hex) is read as `1A.1F`. The law allows that; the plan should
+  show the rename as a normalization once plans exist (design-patterns.md,
+  "Lenses"), which needs `parse` to say whether a name was canonical.
+- **Diagnostics.** Nickel's error for a misspelled field should name it; a
+  snapshot test of the message (`insta`) when errors get their final form.
+- **Windows.** CI runs Linux and macOS. Windows forbids characters
+  `portability()` reports; a Windows job when someone uses xD there.
+- **Fuzzing** with `cargo fuzz` on the parsers, once there's more parsing
+  (the shorthand grammar, Org JDex). The `parse_never_panics` property
+  covers today's.
 
 ## Tests for what comes next
 
@@ -207,13 +183,17 @@ Five to ten tests in total.
 
 - **Line coverage**: `xd-core` 90% or more, `xd-nickel` 80%, measured with
   `cargo llvm-cov` in CI and shown on the pull request, not enforced as a
-  gate until the plan module exists.
+  gate until the plan module exists. Not set up yet.
 - **Mutation testing**: `cargo mutants` on `xd-core` weekly. The goal is no
   surviving mutant in `registry.rs` and the plan module: those hold the
   never-reuse and undo promises, where a test that runs the code but checks
-  nothing is worst.
-- **Property cases**: 256 by default, 10,000 in a weekly job; regressions
-  committed under `proptest-regressions/`.
+  nothing is worst. Not set up yet; three hand-made mutants were checked
+  (see "What's covered"), and one survived only because it was equivalent.
+- **Property cases**: 512 for the laws, 256 for the registry, 128 for the
+  Nickel agreement (each case evaluates a Nickel program), 200 for real
+  folders; `PROPTEST_CASES` overrides all of them, and the weekly CI job
+  sets 10,000. Seeds of real failures are committed next to each test file
+  (`*.proptest-regressions`).
 - **Speed**: `cargo test` under a minute; the folder tests stay at 200 cases.
 
 ## Not tested
@@ -225,12 +205,8 @@ Five to ten tests in total.
 - The docs. Examples in them that are code become doctests when the API
   settles.
 
-## Suggested order
+## Next
 
-1. CI workflow (Linux and macOS) running what `AGENTS.md` lists.
-2. Fix and pin the two panics above.
-3. Registry state-machine property test and the wider scheme generator.
-4. GetPut, with a `canonical` signal from `parse`.
-5. Nickel/Rust differential property.
-6. Then the plan module, written with its table test and inversion law
-   from the start.
+The plan module, written with its table test, convergence and inversion
+laws from the start, with its generators and laws added to
+`xd-conformance` alongside today's.
