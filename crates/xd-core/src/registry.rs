@@ -162,11 +162,17 @@ impl Registry {
         policy: Policy,
         reserved: &dyn Reserved,
     ) -> Result<Address, RegistryError> {
+        if let Some(p) = parent
+            && p.check(scheme).is_err()
+        {
+            return Err(RegistryError::Invalid(p.clone()));
+        }
         let level = parent.map_or(0, |p| p.level() + 1);
         let full = || {
-            RegistryError::Full(
-                parent.map_or_else(|| "the top level".to_string(), |p| p.render(scheme)),
-            )
+            RegistryError::Full(parent.map_or_else(
+                || "the top level".to_string(),
+                |p| p.render_unchecked(scheme),
+            ))
         };
         if level >= scheme.levels.len() {
             return Err(full());

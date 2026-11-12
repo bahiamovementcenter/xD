@@ -22,11 +22,11 @@ fn jd_scheme_is_valid() {
 #[test]
 fn renders_jd_numbers() {
     let s = jd::scheme();
-    assert_eq!(addr(&[1]).render(&s), "10-19");
-    assert_eq!(addr(&[0]).render(&s), "00-09");
-    assert_eq!(addr(&[1, 1]).render(&s), "11");
-    assert_eq!(addr(&[1, 1, 11]).render(&s), "11.11");
-    assert_eq!(addr(&[1, 1, 3]).render(&s), "11.03");
+    assert_eq!(addr(&[1]).render(&s).unwrap(), "10-19");
+    assert_eq!(addr(&[0]).render(&s).unwrap(), "00-09");
+    assert_eq!(addr(&[1, 1]).render(&s).unwrap(), "11");
+    assert_eq!(addr(&[1, 1, 11]).render(&s).unwrap(), "11.11");
+    assert_eq!(addr(&[1, 1, 3]).render(&s).unwrap(), "11.03");
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn rejects_out_of_range_values() {
 fn folder_names() {
     let s = jd::scheme();
     assert_eq!(
-        name::render(&s, &addr(&[1, 1, 11]), Some("Passport")),
+        name::render(&s, &addr(&[1, 1, 11]), Some("Passport")).unwrap(),
         "11.11 Passport"
     );
     assert_eq!(
@@ -101,17 +101,17 @@ fn folder_names() {
 fn hex_base_changes_only_the_digits() {
     let s = hex_scheme();
     let a = Address::new(&s, vec![1]).unwrap();
-    assert_eq!(a.render(&s), "10-1F");
+    assert_eq!(a.render(&s).unwrap(), "10-1F");
     let id = Address::new(&s, vec![1, 10, 0x3F]).unwrap();
-    assert_eq!(id.render(&s), "1A.3F");
+    assert_eq!(id.render(&s).unwrap(), "1A.3F");
     assert_eq!(Address::parse(&s, "1a.3f"), Some(id));
 }
 
 #[test]
 fn integer_form_keeps_tree_order() {
     let s = jd::scheme();
-    assert_eq!(addr(&[1, 1, 13]).to_integer(&s), 1113);
-    assert_eq!(addr(&[9, 9, 99]).to_integer(&s), 9999);
+    assert_eq!(addr(&[1, 1, 13]).to_integer(&s).unwrap(), 1113);
+    assert_eq!(addr(&[9, 9, 99]).to_integer(&s).unwrap(), 9999);
 }
 
 #[test]
@@ -340,9 +340,9 @@ proptest! {
     // Formal 1.5: parse(render(e)) = e.n, for any scheme, not only JD's.
     #[test]
     fn render_then_parse_round_trips((s, a) in scheme_and_address(), label in "[A-Za-z][A-Za-z ]{0,10}") {
-        prop_assert_eq!(Address::parse(&s, &a.render(&s)), Some(a.clone()));
+        prop_assert_eq!(Address::parse(&s, &a.render(&s).unwrap()), Some(a.clone()));
         prop_assert_eq!(
-            name::parse(&s, &name::render(&s, &a, Some(&label))),
+            name::parse(&s, &name::render(&s, &a, Some(&label)).unwrap()),
             Parsed::Numbered { address: a, label: Some(label) }
         );
     }
@@ -354,6 +354,6 @@ proptest! {
         // `b` comes from another scheme; keep it only if it fits this one.
         let Ok(b) = Address::new(&s, b.values().to_vec()) else { return Ok(()) };
         prop_assume!(a.level() == b.level());
-        prop_assert_eq!(a.render(&s).cmp(&b.render(&s)), a.cmp(&b));
+        prop_assert_eq!(a.render(&s).unwrap().cmp(&b.render(&s).unwrap()), a.cmp(&b));
     }
 }

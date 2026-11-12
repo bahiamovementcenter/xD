@@ -31,6 +31,17 @@ pub enum AddressError {
 
 impl Address {
     pub fn new(scheme: &Scheme, values: Vec<u32>) -> Result<Self, AddressError> {
+        Self::check_values(scheme, &values)?;
+        Ok(Address(values))
+    }
+
+    /// Whether this address belongs to `scheme`. An address doesn't carry its
+    /// scheme, so one made for another system can be handed to this one.
+    pub fn check(&self, scheme: &Scheme) -> Result<(), AddressError> {
+        Self::check_values(scheme, &self.0)
+    }
+
+    fn check_values(scheme: &Scheme, values: &[u32]) -> Result<(), AddressError> {
         if values.is_empty() {
             return Err(AddressError::Empty);
         }
@@ -50,7 +61,7 @@ impl Address {
                 });
             }
         }
-        Ok(Address(values))
+        Ok(())
     }
 
     pub fn values(&self) -> &[u32] {
@@ -92,8 +103,14 @@ impl Address {
         Address(vec![value])
     }
 
-    /// The number as the scheme writes it: `10-19`, `11`, `11.11`.
-    pub fn render(&self, scheme: &Scheme) -> String {
+    /// The number as the scheme writes it: `10-19`, `11`, `11.11`. Fails
+    /// only for an address that doesn't fit `scheme` (see [`Address::check`]).
+    pub fn render(&self, scheme: &Scheme) -> Result<String, AddressError> {
+        self.check(scheme)?;
+        Ok(self.render_unchecked(scheme))
+    }
+
+    pub(crate) fn render_unchecked(&self, scheme: &Scheme) -> String {
         if scheme.levels[self.level()].range {
             let max = scheme.capacity(self.level() + 1) - 1;
             format!(
@@ -158,15 +175,17 @@ impl Address {
     }
 
     /// Integer form (experiments E2): all levels as one number in the base,
-    /// so sorting integers of one level sorts the names.
-    pub fn to_integer(&self, scheme: &Scheme) -> u64 {
-        scheme
+    /// so sorting integers of one level sorts the names. Fits in 64 bits
+    /// for every scheme [`Scheme::validate`] accepts.
+    pub fn to_integer(&self, scheme: &Scheme) -> Result<u64, AddressError> {
+        self.check(scheme)?;
+        Ok(scheme
             .levels
             .iter()
             .zip(&self.0)
             .fold(0u64, |acc, (level, &v)| {
                 acc * u64::from(scheme.base).pow(level.width) + u64::from(v)
-            })
+            }))
     }
 }
 

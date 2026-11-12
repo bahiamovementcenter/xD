@@ -58,7 +58,7 @@ proptest! {
         let dir = tempfile::tempdir().unwrap();
         let wanted: BTreeSet<Address> = addresses.into_iter().collect();
         for a in &wanted {
-            fs::create_dir(dir.path().join(name::render(&s, a, Some("Label")))).unwrap();
+            fs::create_dir(dir.path().join(name::render(&s, a, Some("Label")).unwrap())).unwrap();
         }
         // A `+` child, a dot entry and a plain folder sit beside the numbers.
         for other in ["+ Wendy", ".jd.ncl", "Notes"] {
@@ -87,7 +87,7 @@ proptest! {
         let mut same: Vec<&Address> = addresses.iter().filter(|a| a.level() == level).collect();
         same.sort();
         same.dedup();
-        let mut names: Vec<String> = same.iter().map(|a| a.render(&s)).collect();
+        let mut names: Vec<String> = same.iter().map(|a| a.render(&s).unwrap()).collect();
         let rendered = names.clone();
         names.sort();
         prop_assert_eq!(names, rendered);
@@ -99,10 +99,10 @@ fn base64url_reads_its_own_dash_as_a_digit() {
     let s = scheme_for(64);
     let area = Address::new(&s, vec![62]).unwrap();
     // Digit 62 is `-` and 63 is `_`.
-    assert_eq!(area.render(&s), "-A~-_");
+    assert_eq!(area.render(&s).unwrap(), "-A~-_");
     assert_eq!(Address::parse(&s, "-A~-_"), Some(area));
     let id = Address::new(&s, vec![63, 62, 63 * 64 + 62]).unwrap();
-    assert_eq!(id.render(&s), "_-._-");
+    assert_eq!(id.render(&s).unwrap(), "_-._-");
     assert_eq!(Address::parse(&s, "_-._-"), Some(id));
 }
 
@@ -110,7 +110,7 @@ fn base64url_reads_its_own_dash_as_a_digit() {
 fn custom_alphabets_are_read_exactly() {
     let s = scheme_for(62);
     let id = Address::new(&s, vec![1, 36, 10]).unwrap();
-    assert_eq!(id.render(&s), "1a.0A");
+    assert_eq!(id.render(&s).unwrap(), "1a.0A");
     assert_eq!(
         Address::parse(&s, "1A.0A"),
         Some(Address::new(&s, vec![1, 10, 10]).unwrap())
@@ -162,7 +162,7 @@ fn base58_alphabet_works() {
     };
     s.validate().unwrap();
     let id = Address::new(&s, vec![0, 57, 58 * 58 - 1]).unwrap();
-    assert_eq!(id.render(&s), "1z.zz");
+    assert_eq!(id.render(&s).unwrap(), "1z.zz");
     assert_eq!(Address::parse(&s, "1z.zz"), Some(id));
     assert_eq!(Address::parse(&s, "1O.zz"), None, "no O in base58");
 }
