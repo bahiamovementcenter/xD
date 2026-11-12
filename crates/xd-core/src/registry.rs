@@ -86,7 +86,7 @@ impl Registry {
         })
     }
 
-    pub fn is_live(&self, address: &Address) -> bool {
+    pub fn is_active(&self, address: &Address) -> bool {
         self.active.contains_key(address)
     }
 
