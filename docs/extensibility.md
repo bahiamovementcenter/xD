@@ -138,6 +138,24 @@ seal when there is a concrete reason.
 Anything not in this table is open to extension or will be when its second
 use appears. Adding a row to it needs an ADR.
 
+## Strategies
+
+Most extension points are the Strategy pattern: the core runs an operation
+and asks a swappable piece for the part that varies. Which form to use:
+
+| Form | Use when | In xD |
+| --- | --- | --- |
+| Closed enum | xD owns every variant | `Policy { AfterHighest, LowestFree }` |
+| Closure | a one-off rule, no state | `Reserved` accepts any `Fn(&Address) -> bool`, e.g. `jd::standard_zeros` |
+| Trait object (`&dyn`) | chosen at run time, off the hot path | `allocate(..., reserved: &dyn Reserved)` |
+| Generic (static dispatch) | a hot path, once profiling says so | none yet; candidates are parsing and rendering names |
+| Named in Nickel | users pick a built-in without code | to come: e.g. `policy = 'after_highest` mapped to a variant |
+| WIT component | anyone, any language, type-checked at load | to come (ADR 0001, decision 5) |
+
+Whatever the form, the strategy decides only the variable part and the core
+keeps the invariant: an allocation policy picks among free numbers, and no
+policy can hand out a reused one (see Virtual members).
+
 ## Considered: context-generic programming (CGP)
 
 [CGP](https://contextgeneric.dev/blog/extensible-datatypes-part-1/) brings
