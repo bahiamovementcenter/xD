@@ -138,6 +138,30 @@ seal when there is a concrete reason.
 Anything not in this table is open to extension or will be when its second
 use appears. Adding a row to it needs an ADR.
 
+## Considered: context-generic programming (CGP)
+
+[CGP](https://contextgeneric.dev/blog/extensible-datatypes-part-1/) brings
+extensible records and variants to Rust: modules each build part of a struct
+without knowing the whole (extensible builders), or each handle some variants
+of an enum (extensible visitors), with safe upcasting and downcasting between
+enums that share variants.
+
+Not adopted, as of 2026-11-12:
+
+- It works at compile time, for Rust code built against xD (rung 4). Most
+  extension happens in Nickel or WIT (rungs 1, 2 and 5), where it doesn't
+  reach.
+- Extensible builders are what Nickel merges already give every user, at
+  configuration time, with no recompiling.
+- It adds many macros and traits, longer builds and harder errors, and it is
+  young (v0.4.2 in the post, v0.7.0 announced since).
+- No abstraction before a second implementation, and there isn't one yet.
+
+Revisit when an enum gets several independent handlers. The likely
+candidates are folder entry kinds (`+` children, dot entries, work packages)
+and check findings, once jdlint's rules are ported. Until then those enums are
+`#[non_exhaustive]` and handled in one place.
+
 ## Follow-ups
 
 - Mark public error enums `#[non_exhaustive]` before the first release, so a
