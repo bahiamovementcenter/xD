@@ -1409,6 +1409,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "xd-conformance"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "xd-core",
+]
+
+[[package]]
 name = "xd-core"
 version = "0.1.0"
 dependencies = [
@@ -1423,9 +1431,11 @@ name = "xd-nickel"
 version = "0.1.0"
 dependencies = [
  "nickel-embed",
+ "proptest",
  "serde",
  "tempfile",
  "thiserror",
+ "xd-conformance",
  "xd-core",
 ]
 
