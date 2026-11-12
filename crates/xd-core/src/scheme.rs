@@ -77,6 +77,8 @@ pub enum SchemeError {
     RangeSeparator,
     #[error("a scheme needs at least one level")]
     NoLevels,
+    #[error("a level has no name")]
+    LevelName,
     #[error("level `{0}` has width 0")]
     Width(String),
     #[error("level `{0}` holds more values than fit in 32 bits")]
@@ -141,6 +143,9 @@ impl Scheme {
         // Address::to_integer packs every level into one u64.
         let mut total: u64 = 1;
         for (i, level) in self.levels.iter().enumerate() {
+            if level.name.is_empty() {
+                return Err(SchemeError::LevelName);
+            }
             if level.width == 0 {
                 return Err(SchemeError::Width(level.name.clone()));
             }

@@ -77,3 +77,12 @@ fn allocating_under_a_parent_from_another_scheme_is_invalid() {
         Err(RegistryError::Invalid(id))
     );
 }
+
+/// Found by the Nickel/Rust agreement test: the contract required a level
+/// name, `validate` didn't, so a scheme valid in Rust couldn't be loaded.
+#[test]
+fn a_level_needs_a_name() {
+    let mut s = jd::scheme();
+    s.levels[1].name.clear();
+    assert_eq!(s.validate(), Err(SchemeError::LevelName));
+}
