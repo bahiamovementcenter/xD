@@ -281,6 +281,37 @@ nearest equivalent through Landlock. A plugin never gets "the file system".
 - **CGP and tagless final in Rust**: compile-time generality we don't need
   yet (extensibility.md).
 
+## Case study: Litho (deepwiki-rs)
+
+[An article on Litho's plugin architecture](https://dev.to/sopaco/from-rust-to-multi-language-lithos-plugin-based-extensible-architecture-design-b8b)
+describes plugin traits (language processors, LLM providers, output
+adapters), a registry that discovers plugins from `./plugins` and the
+environment, Rust `cdylib` plugins, lazy loading through `Box<dyn Any>`
+downcasts, and an in-process "sandbox".
+
+The [repository](https://github.com/sopaco/deepwiki-rs) (checked
+2026-11-12) has the `LanguageProcessor` trait, but no registry, discovery,
+dynamic loading or sandbox: a `LanguageProcessorManager` holds a fixed
+`Vec<Box<dyn LanguageProcessor>>` of built-in processors and picks one by
+file extension.
+
+What xD takes from it:
+
+- **The repository is the better design.** Built-in strategies chosen by
+  data (a file extension there, a Nickel field here) are rung 3 of the
+  ladder: cheap, typed and testable. It's where most xD extension points
+  should start.
+- **One output model for many inputs.** Every processor returns the same
+  `CodeInsight`; every xD projection or app adapter reads and writes the
+  same entries and components. Plugins vary the parsing, never the model.
+- **What to avoid from the article:** Rust `cdylib` plugins (no stable Rust
+  ABI, same process, unsafe to load), `Box<dyn Any>` downcasts (types lost at
+  the boundary, the opposite of what xD wants), discovery from the working
+  directory (a hidden dependency and a way to run unexpected code), and an
+  in-process sandbox (code in the same process isn't isolated). WIT
+  components cover the same needs with load-time type checks and real
+  isolation.
+
 ## Proposed next ADRs
 
 1. **Plan and apply.** Plans are data with inverse operations; three-way
