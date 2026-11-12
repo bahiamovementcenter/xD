@@ -159,8 +159,8 @@ Not adopted, as of 2026-11-12:
 
 Revisit when an enum gets several independent handlers. The likely
 candidates are folder entry kinds (`+` children, dot entries, work packages)
-and check findings, once jdlint's rules are ported. Until then those enums are
-`#[non_exhaustive]` and handled in one place.
+and check findings, once jdlint's rules are ported. Until then those enums are handled in one place each, and get
+`#[non_exhaustive]` before the first release (see Follow-ups).
 
 ## Follow-ups
 
