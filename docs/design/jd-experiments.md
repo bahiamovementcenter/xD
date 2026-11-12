@@ -265,6 +265,7 @@ level separator `.`, then the hidden name with its own leading `.`:
 | `11.12..git` | `11 Me/11.12 Website/.git` | git, for `'repo` storage |
 | `10-19..stfolder` | `10-19 Life admin/.stfolder` | Syncthing |
 | `00.00..obsidian` | `00-09 …/00 …/00.00 JDex/.obsidian` | a note app |
+| `11..owners` | `11 Me/.owners` | ownership (E11) |
 
 This makes them a **third kind of child**, alongside IDs and `+` children:
 
@@ -479,6 +480,52 @@ can be a short name that resolves to it. The design already does this once:
 
 **Verdict:** the four-slot split is worth adopting in the formal model now; it
 costs nothing on disk. The owner level waits until a system is shared.
+
+## E11. Owners as files in the tree
+
+Who owns a node is not part of any name or shorthand (an earlier `@actor`
+notation was dropped). It lives in a hidden `.owners` file inside the node's
+own folder, an E8 dot entry (shorthand `11..owners`), so ownership follows the
+hierarchy and stays out of file-manager view:
+
+```
+~/P76/
+├── .owners                    P76..owners: system owners
+├── 10-19 Life admin/
+│   └── 11 Me/
+│       ├── .owners            11..owners: category 11 and everything in it
+│       └── 11.11 Passport/
+│           └── .owners        11.11..owners: overrides for 11.11 only
+```
+
+- **Nearest file wins.** A node without a `.owners` takes its nearest
+  ancestor's, the way most-specific rules win in CODEOWNERS. A file can opt
+  out of inheriting (Chromium's `set noparent`).
+- **Prior art.** Per-directory owner files are how Chromium (`OWNERS`),
+  Kubernetes (`OWNERS`, with separate `approvers` and `reviewers`) and
+  Gerrit's code-owners plugin work. GitHub, GitLab and Forgejo read only one
+  `CODEOWNERS` per repo, so jd compiles the `.owners` files into that one,
+  as workflow-rules.md already does for per-area `owners`.
+- **Owns vs. may act.** Kubernetes' split answers it: `approvers` approve
+  changes, `reviewers` (or an agent's working scope) may act. One file can hold
+  both.
+- **Actors are identities** (E10): each entry resolves to a DID or a host
+  handle; users, agents and groups only differ in what that identity says.
+- **Policy** attaches as a `+` child of the owners file's node or as a
+  section in the file, compiled together with it into the host's review and
+  `protect` rules.
+
+**Which repo holds them.** In the distributed layout the root is a jj repo
+that tracks `.jd.ncl` files and the JDex, so `.owners` files sit next to
+them. In the central layout the folders aren't in a repo, so ownership stays
+the `owners` field in the config; a `.owners` file on disk would be a disk
+edit for `jd plan` to record.
+
+**Decided (2026-11-12):** the file is `.owners`, an E8 dot entry. Only the
+compiled `CODEOWNERS` is read by the git host.
+
+**Verdict:** adopt; it extends what shared systems already need and keeps
+names free of ownership.
 
 ## Open
 
