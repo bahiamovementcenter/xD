@@ -74,13 +74,12 @@ makes the extensions in section 2 possible without collisions.
 
 ---
 
-## 2. Modules (each optional, each independent of the others)
+## 2. Modules (each optional; dependencies noted where they exist)
 
 ### 2.1 Standard zeros: reserved slots
 
-Reserves a fixed sub-range at every level for managing that level:
-
-The same ten slots repeat at three scopes
+Reserves a fixed sub-range at every level for managing that level. The same
+ten slots repeat at three scopes
 ([JD docs](https://johnnydecimal.com/documentation/the-standard-zeros)):
 
 | Scope | Where | Example |
@@ -113,11 +112,11 @@ becomes 9 areas × 9 categories × 89 IDs.
 
 `SYS = [A-Z][0-9]{2}`, so `A00`–`Z99` is 2,600 systems (JD docs; this repo:
 `P76`, `D25`). The full address is `SYS.ak.mm`, e.g. `H01.11.11`. The docs
-say to use it only when systems share a domain. Each `SYS` is its own space with its own copy of 1.3 and 1.4. The
-prefix only selects which space; there is no relation between `P76.11.11` and
+say to use it only when systems share a domain. Each `SYS` is its own space
+with its own copy of 1.3 and 1.4. The prefix only selects which space; there is no relation between `P76.11.11` and
 `D25.11.11`.
 
-### 2.3 Extend-the-end (`+` qualifiers)
+### 2.3 Extend-the-end (`+` children)
 
 `ak.mm+ Title` (JD writes it `AC.ID+`; examples are `11.63+ Wendy` and
 `72.02+ X01`, always with a space, though no rule requires one) adds a child
@@ -144,14 +143,13 @@ sits outside any area and has no categories
 - No `+` children; inside, ordinary subfolders in blocks of ten
   (`05 Planning` … `95 …`).
 
-### 2.5 Archive strategy
+### 2.5 Archive strategy (this repo)
 
 A function `archive_target: Address → Location` with four values
 (`standard`, `last_slot`, `in_place`, `separate_root`; see workflow-rules.md).
 It only decides **where** retired entries go. The fact of retirement is
-already fixed by 1.4.
-
----
+already fixed by 1.4. JD itself has only `standard`: archive into the nearest
+`.09` (needs 2.1). The other three are this repo's additions.
 
 ### 2.6 Expand an area
 
@@ -182,11 +180,11 @@ most one pattern `P ∈ {date, alpha, tens}` that all other subfolders match.
 
 ```abnf
 address      = [ sys "." ] ( area / category / id )
-sys          = ALPHA 2DIGIT
+sys          = %x41-5A 2DIGIT              ; A-Z only (ABNF strings ignore case)
 area         = DIGIT "0-" DIGIT "9"        ; same leading digit, checked separately
 category     = 2DIGIT
 id           = category "." 2DIGIT
-child-entry  = id "+" SP label             ; 2.3, JDex entry title
+child-entry  = id "+" SP label             ; 2.3, JDex entry title, as the docs write it
 child-folder = "+" SP label                ; 2.3, folder inside the ID folder
 wp           = "W" 4DIGIT                  ; 2.4
 wp-entry     = wp "~" id [ SP label ]
@@ -197,6 +195,8 @@ label        = 1*( VCHAR / SP )
 JD's own placeholders (acid-notation): `AC.ID` any ID, `1C.ID` any ID in
 area `10-19`, `11.ID` any ID in category `11`, `AC.11` ID `.11` in any
 category, `SYS.AC.ID` with a system prefix.
+
+Not covered: entries of an expanded area (2.6), whose format is per area.
 
 Semantic constraints that ABNF can't express: an area's two digits match
 (`1` and `1` in `10-19`); a category's first digit is its area; 2.1's
@@ -214,11 +214,11 @@ time.
 | --- | --- | --- |
 | 1.1–1.2 address + prefix tree | fixed-depth decimal hierarchy | Dewey Decimal / UDC (decimal classification); CIDR (`10-19` is the prefix `1*`) |
 | 1.3 identity ≠ label | number is identity | DOI and handles (persistent ID, mutable metadata); content addressing (CID) vs names |
-| 1.4 never reuse | append-only registry | IANA registries, DOI, UUIDv7/ULID sequences |
+| 1.4 never reuse | append-only registry | IANA registries, DOI, database sequences |
 | 1.5 projections | lossless number round-trip | serialization formats; Org `CUSTOM_ID`; URI templates |
 | 2.1 reserved slots | management sub-ranges | reserved IP ranges (RFC 1918), well-known ports |
 | 2.2 system prefix | namespace selection | URN namespace IDs (RFC 8141), DNS labels |
-| 2.3 `+` qualifier | attach without allocating | URI fragments (`#`), DOI suffixes |
+| 2.3 `+` children | attach without allocating | URI fragments (`#`), DOI suffixes |
 | 2.4 work packages | flat ID with a foreign key | ticket keys (`PROJ-123`), Git refs to commits |
 | 2.5 archive strategy | where retired things live | storage tiering; tombstones in CRDTs and DNS |
 | 2.6 expand an area | a foreign scheme under one area prefix | any of the others: dates (ISO 8601), UUIDs, DOIs, ticket keys |
