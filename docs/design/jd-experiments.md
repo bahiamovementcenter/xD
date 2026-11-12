@@ -140,6 +140,120 @@ out loud.
 **Verdict:** worth building once sync between machines matters; it's the
 cheapest way to tell what changed.
 
+## E5. Shorthand notation
+
+A **shorthand** is the shortest string that pins down one place in the tree.
+Because a number spells its own ancestors (formal 3.1), a shorthand needs only
+the last number, plus a `+` title if it names a child. Expanding it to a path
+needs the JDex, but only for the labels.
+
+| Shorthand | Expands to |
+| --- | --- |
+| `11` | `10-19 Life admin/11 Me` |
+| `11.11` | `10-19 Life admin/11 Me/11.11 Passport` |
+| `11.11+ Renew` | `10-19 Life admin/11 Me/11.11 Passport/+ Renew` |
+| `P76.11.11` | `~/P76/10-19 Life admin/11 Me/11.11 Passport` |
+| `W0003` | `W0000-9999 Work packages/W0003~11.11 Renew passport` |
+
+- **Expand:** `shorthand → path` walks up the digits (`11.11 → 11 → 1`) and
+  looks up each level's label in the JDex.
+- **Collapse:** `path → shorthand` parses only the last structural folder name
+  (`+ Title` also needs its parent), because that name already holds the whole
+  number. Labels drop out, so collapsing is lossless on identity.
+- `W0003~11.11` is the same place as `W0003`; the `~11.11` is a check that has
+  to agree with the JDex.
+
+**Open: `W0003~11.11+ Title`.** JD gives no reading for it. Two possible
+rules:
+
+1. **Reject it** (today's rule): work packages have no `+` children, and the
+   name would look like a second `W0003` to jd.
+2. **`+` binds to the nearest number on its left:** the work package links to
+   the child `11.11+ Title`, not just to `11.11`. That would let a work package
+   point at one specific child, but it extends JD.
+
+A full precedence order for the separators (`/` loosest, then `~`, `+`, `.`,
+`-` tightest) would settle cases like this one. So would explicit brackets
+(E6), which is the simpler fix.
+
+**Verdict:** expansion and collapse are worth building (they power `jd`
+commands that take `11.11` and find the folder). The `~…+` extension needs a
+real use case first.
+
+## E6. Encapsulators
+
+Bracket pairs that wrap any element from formal 3.1 (a number, a label, or a
+whole shorthand) and say how to read it. Each pair reuses a meaning it already
+has elsewhere:
+
+| Pair | Meaning | Existing convention | Example |
+| --- | --- | --- | --- |
+| `( )` | grouping: read this part first | math, most grammars | `W0003~(11.11+ Title)` |
+| `{ , }` | a set: one address per option | shell brace expansion | `11.{11,12,13}` = three IDs |
+| `< >` | a placeholder for a value | man pages, this repo's docs (`<jj change ID>`) | `11.13+ <change ID>` |
+| `[ ]` | an ordering hint inside a label | JD subfolder patterns (`Butcher, Lucy [03]`) | `Butcher, Lucy [03]` |
+
+**Grouping settles E5's open case** without a precedence rule:
+
+- `W0003~(11.11+ Title)`: the work package links to the child of `11.11`.
+- `(W0003~11.11)+ Title`: a child of the work package. JD has no such thing,
+  so it's rejected unless that changes.
+- `W0003~11.11+ Title` with no brackets stays ambiguous, so it's an error that
+  asks for brackets.
+
+**Only in shorthand, never in folder names:**
+
+- `< >` can't be used in Windows file names. `( )`, `[ ]` and `{ }` can, but
+  the shell treats them specially (subshell, glob, brace expansion), so names
+  with them need quoting.
+- `[ ]` is already JD's, inside labels. A parser that stops at the first space
+  (formal 1.5) never reads a label, so there's no clash.
+- Expansion (E5) removes the brackets: `11.{11,12}` expands to two paths, and
+  `( )` disappears once the grouping is applied.
+
+**Verdict:** worth adding to the shorthand grammar. `( )` and `{ }` cost
+nothing and fix real ambiguity; `< >` is for docs and templates only.
+
+## E7. Role brackets (alternative to E6)
+
+The same bracket pairs, but each one marks a **role** instead of a reading
+order. Once every part is marked, spaces and the order of parts carry no
+meaning. E6 and E7 give `[ ]` and `( )` different meanings, so a shorthand
+grammar can adopt only one of them.
+
+| Pair | Holds | Example |
+| --- | --- | --- |
+| `[ ]` | a number (the identity) | `[11.11]`, `[W0003]`, `[10-19]` |
+| `( )` | a label, owned by the number just before it | `[11.11](Passport)`, `[10-19](Life admin)` |
+| `{ }` | a link to another number | `[W0003]{[11.11]}` |
+| `+` | a child; its title goes in `( )` | `[11.11]+(Wendy)` |
+
+| Plain shorthand (E5) | Role brackets | Meaning |
+| --- | --- | --- |
+| `11.11` | `[11.11]` | ID `11.11` |
+| `10-19 Areas` | `[10-19](Areas)` | area `10-19`, labeled Areas |
+| `W0003~11.11 Title` | `[W0003](Title){[11.11]}` | work package linked to `11.11` |
+| none | `[W0003](Title){[11.11]+(Wendy)}` | work package linked to the child Wendy of `11.11` |
+| `W0003~11.11+ Title`, one reading | `[W0003]{[11.11]}+(Title)` | a child of the work package; JD has none, so rejected |
+
+**Gains over E6:**
+
+- A label ends only at its closing `)`, so it can hold spaces, `.`, `+`, `~`
+  and JD's own `[03]` (`(Butcher, Lucy [03])`). Brackets must balance.
+- Every case from E5 has exactly one form, so there's no ambiguity left and no
+  precedence to decide.
+
+**Costs:**
+
+- More characters than plain shorthand for the common case (`[11.11]`
+  vs `11.11`).
+- It's further from how JD writes things. Like E6, it's for shorthand only;
+  folder names stay plain JD.
+
+**Verdict:** E7 is the stricter, machine-friendly form; E6 is lighter for
+typing. A tool could accept plain E5 shorthand, use E6 to disambiguate, and
+print E7 when it must be exact. Undecided.
+
 ## Open
 
 1. E2 color: test whether people can see the groupings. Render one real JD

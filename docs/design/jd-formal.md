@@ -202,6 +202,25 @@ Semantic constraints that ABNF can't express: an area's two digits match
 (`1` and `1` in `10-19`); a category's first digit is its area; 2.1's
 `reserved` predicate; the uniqueness and retirement rules of 1.3 and 1.4.
 
+### 3.1 Separators
+
+Six characters carry all the structure. Everything after the first space is a
+label, so a label may contain any of them.
+
+| Separator | Between | Meaning | Example |
+| --- | --- | --- | --- |
+| `-` | first and last category of an area | a range | `10-19` |
+| `.` | system and category; category and ID | the next level **inside one number** | `P76.11.11` |
+| ` ` (space) | a number and its label; `+` and its title | end of the number, start of the label | `11.11 Passport`, `+ Wendy` |
+| `+` | after an ID (JDex), or at the start of a folder name | a child that takes no number | `11.63+ Wendy`, `+ Wendy/` |
+| `~` | a work package and its ID | a link to an ID in the other tree | `W0011~11.13` |
+| `/` | folders | the next level **on disk** | `10-19 Life admin/11 Me` |
+
+`.` and `/` both mean "one level down". A number spells its own ancestors
+(`11.11` contains `11` and area `1`), so a path repeats digits that the number
+already holds: `10-19 …/11 …/11.11 …`. That redundancy is what makes a short
+form possible (experiments, E5).
+
 ---
 
 ## 4. Seams: where an existing system could plug in
