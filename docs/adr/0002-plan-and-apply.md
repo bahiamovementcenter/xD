@@ -31,16 +31,16 @@ A plan is computed from:
 
 | Input | Where it comes from |
 | --- | --- |
-| **Desired** | the configuration at the working copy |
-| **Observed** | the folders, the JDex and the apps, read now |
+| **Config** | the configuration at the working copy |
+| **Live** | the folders, the JDex and the apps, read now |
 | **Last applied** | the configuration at `xd-applied/<host>` |
 
-With only desired and observed, a folder that exists on disk but not in the
+With only config and live, a folder that exists on disk but not in the
 configuration is ambiguous: removed from the configuration, or made by hand?
 The last-applied state decides it, as `kubectl apply` uses
 `last-applied-configuration`. For each entry:
 
-| Desired vs last applied | Observed vs last applied | Meaning | Plan |
+| Config vs last applied | Live vs last applied | Meaning | Plan |
 | --- | --- | --- | --- |
 | same | same | nothing changed | nothing |
 | changed | same | config edit | change the disk |
@@ -52,7 +52,7 @@ A disk edit is never undone silently. Recording it is itself a plan the user
 accepts, or the user restores the disk.
 
 On a first run there is no `xd-applied/<host>` yet: last applied is treated
-as equal to observed, so everything on disk counts as already there and only
+as equal to live, so everything on disk counts as already there and only
 config edits produce changes.
 
 The comparison is **level-triggered**: every `xd plan` recomputes from the
@@ -62,7 +62,7 @@ make a plan wrong. A watcher only tells xD *when* to plan.
 ### 2. A plan is a list of operations, and nothing else
 
 Planning is a pure function in the core:
-`plan(desired, observed, last_applied) -> Plan`. A plan is an ordered list
+`plan(config, live, last_applied) -> Plan`. A plan is an ordered list
 of operations, each a plain, serializable value, for example:
 
 | Operation | Inverse |
@@ -130,5 +130,5 @@ The stages are types: `Plan<Draft>`, then `check()` returns
 ## Open
 
 - The exact first set of operations, settled while writing `plan`.
-- What "observed" includes from apps (Org JDex, task managers) before their
+- What "live" includes from apps (Org JDex, task managers) before their
   adapters exist: for now, folders and the JDex only.

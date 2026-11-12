@@ -15,11 +15,11 @@ pub struct Entry {
 }
 
 /// Which free number [`Registry::allocate`] picks. The invariant (never a
-/// live, retired or reserved number) holds for every policy; the choice
+/// active, retired or reserved number) holds for every policy; the choice
 /// between free numbers is policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Policy {
-    /// One more than the highest number ever used under the parent, live or
+    /// One more than the highest number ever used under the parent, active or
     /// retired: JD's "in the sequence that you created them".
     #[default]
     AfterHighest,
@@ -54,23 +54,23 @@ pub enum RegistryError {
     Duplicate(Address),
     #[error("{0} was retired; numbers are never reused")]
     Reused(Address),
-    #[error("{0} has no live parent")]
+    #[error("{0} has no active parent")]
     MissingParent(Address),
     #[error("{0} doesn't fit the scheme")]
     Invalid(Address),
-    #[error("{0} isn't live")]
+    #[error("{0} isn't active")]
     NotLive(Address),
-    #[error("{0} still has live children")]
-    HasLiveChildren(Address),
+    #[error("{0} still has active children")]
+    HasActiveChildren(Address),
     #[error("{0} has no free number left; it may be too broad and need splitting")]
     Full(String),
 }
 
-/// The live and retired numbers of one system. `live` and `retired` never
+/// The active and retired numbers of one system. `active` and `retired` never
 /// overlap, and `retired` only grows.
 #[derive(Debug, Clone, Default)]
 pub struct Registry {
-    live: BTreeMap<Address, String>,
+    active: BTreeMap<Address, String>,
     retired: BTreeSet<Address>,
 }
 
@@ -80,23 +80,23 @@ impl Registry {
     }
 
     pub fn get(&self, address: &Address) -> Option<Entry> {
-        self.live.get(address).map(|label| Entry {
+        self.active.get(address).map(|label| Entry {
             address: address.clone(),
             label: label.clone(),
         })
     }
 
     pub fn is_live(&self, address: &Address) -> bool {
-        self.live.contains_key(address)
+        self.active.contains_key(address)
     }
 
     pub fn is_retired(&self, address: &Address) -> bool {
         self.retired.contains(address)
     }
 
-    /// Live entries in tree order.
+    /// Active entries in tree order.
     pub fn entries(&self) -> impl Iterator<Item = Entry> + '_ {
-        self.live.iter().map(|(address, label)| Entry {
+        self.active.iter().map(|(address, label)| Entry {
             address: address.clone(),
             label: label.clone(),
         })
@@ -112,24 +112,24 @@ impl Registry {
         if Address::new(scheme, address.values().to_vec()).is_err() {
             return Err(RegistryError::Invalid(address));
         }
-        if self.live.contains_key(&address) {
+        if self.active.contains_key(&address) {
             return Err(RegistryError::Duplicate(address));
         }
         if self.retired.contains(&address) {
             return Err(RegistryError::Reused(address));
         }
         if let Some(parent) = address.parent()
-            && !self.live.contains_key(&parent)
+            && !self.active.contains_key(&parent)
         {
             return Err(RegistryError::MissingParent(address));
         }
-        self.live.insert(address, entry.label);
+        self.active.insert(address, entry.label);
         Ok(())
     }
 
     /// Changes a label. The number, and so the identity, stays.
     pub fn rename(&mut self, address: &Address, label: String) -> Result<(), RegistryError> {
-        match self.live.get_mut(address) {
+        match self.active.get_mut(address) {
             Some(old) => {
                 *old = label;
                 Ok(())
@@ -138,22 +138,22 @@ impl Registry {
         }
     }
 
-    /// Moves a number from live to retired, for good. Where the retired
+    /// Moves a number from active to retired, for good. Where the retired
     /// thing is stored (an archive strategy, formal 2.5) isn't decided here.
     pub fn retire(&mut self, address: &Address) -> Result<(), RegistryError> {
-        if !self.live.contains_key(address) {
+        if !self.active.contains_key(address) {
             return Err(RegistryError::NotLive(address.clone()));
         }
-        if self.live.keys().any(|a| address.is_ancestor_of(a)) {
-            return Err(RegistryError::HasLiveChildren(address.clone()));
+        if self.active.keys().any(|a| address.is_ancestor_of(a)) {
+            return Err(RegistryError::HasActiveChildren(address.clone()));
         }
-        self.live.remove(address);
+        self.active.remove(address);
         self.retired.insert(address.clone());
         Ok(())
     }
 
     /// The next number under `parent` (or at the top level for `None`),
-    /// skipping live, retired and reserved numbers. It isn't added: pass it
+    /// skipping active, retired and reserved numbers. It isn't added: pass it
     /// to [`Registry::insert`] with a label.
     pub fn allocate(
         &self,
@@ -172,7 +172,7 @@ impl Registry {
             return Err(full());
         }
         if let Some(p) = parent
-            && !self.live.contains_key(p)
+            && !self.active.contains_key(p)
         {
             return Err(RegistryError::NotLive(p.clone()));
         }
@@ -180,7 +180,7 @@ impl Registry {
             Some(p) => p.child_unchecked(value),
             None => Address::root_unchecked(value),
         };
-        let used = |a: &Address| self.live.contains_key(a) || self.retired.contains(a);
+        let used = |a: &Address| self.active.contains_key(a) || self.retired.contains(a);
         let free = |a: &Address| !used(a) && !reserved.is_reserved(a);
         let capacity = scheme.capacity(level);
         let start = match policy {

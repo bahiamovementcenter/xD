@@ -284,7 +284,7 @@ fn registry_invariants() {
     );
     assert_eq!(
         r.retire(&addr(&[1, 1])),
-        Err(RegistryError::HasLiveChildren(addr(&[1, 1])))
+        Err(RegistryError::HasActiveChildren(addr(&[1, 1])))
     );
     r.rename(&addr(&[1, 1, 11]), "Travel documents".into())
         .unwrap();
