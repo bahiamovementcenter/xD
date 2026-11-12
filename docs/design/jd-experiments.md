@@ -404,6 +404,82 @@ is the agent's, `.01` is yours) or drop them from the board.
 **Verdict:** the byte layout is neat. Settle JD's claim on `.05` first, then
 the folders-or-status question.
 
+## E10. Identity, label, pointer, proof
+
+Formal 1.3 has two slots, `n` (identity) and `label`. Splitting them by the
+question each answers gives four, and each can hold more than a JD number or a
+name:
+
+| Slot | Answers | JD today | Could also hold |
+| --- | --- | --- | --- |
+| Identity | which thing? | `P76.11.11` | UUID, ULID, DID, DOI, URN, envelope digest |
+| Label | what do people call it? | `Passport` | other languages, an icon, a color (E2), a handle |
+| Pointer | where is it? | the folder path | URL, `ipfs://`, `s3://`, git remote, symlink |
+| Proof | is it the right content? | none | content digest (E4), signature |
+
+### Identity is a chain of namespaces
+
+Each level is unique only within the one above it:
+
+```
+owner (DID or domain) → system (P76) → AC.ID (11.11) → + child / .. entry
+globally unique         unique per owner  unique per system  unique per ID
+```
+
+- **The system code is the namespace JD already has** (formal 2.2), but
+  `A00`–`Z99` is only unique per person: two people's `P76` collide.
+- **The owner level is new.** It's needed once systems are shared or
+  published. Options: a DID (`did:key:z6Mk…`, self-certifying, no registry, and
+  the same key can sign envelopes, so identity and proof share a root), a
+  domain (DNS), or an informal URN (`urn:jd:<owner>:P76:11.11`; `jd` isn't a
+  registered URN namespace).
+- **On disk, identity is split.** The root folder (`~/P76`) supplies the
+  owner and system; each folder name carries only `AC.ID`.
+
+### Each slot holds a set, with one primary
+
+```
+identities: { jd: P76.11.11 (primary), uuid: 0193…, did: did:key:z6Mk…/P76.11.11 }
+labels:     { en: Passport (primary), pt: Passaporte, icon: 🛂 }
+pointers:   [ file:///~/P76/…/11.11 Passport, s3://bucket/…, ipfs://bafy… ]
+proofs:     { digest: sha256:… }
+```
+
+This is a Gordian Envelope: identity as the subject, the rest as assertions,
+each one separately elidable or encryptable.
+
+### What can be the primary identity
+
+It must keep what formal 1.3–1.5 rely on:
+
+| Scheme | Unique | Stable | Short | Useful sort | Holds its parent | Role |
+| --- | --- | --- | --- | --- | --- | --- |
+| JD number | yes | yes | yes | yes | yes | primary |
+| ULID | yes | yes | 26 chars | by creation time | no | flat spaces (like work packages) |
+| UUID v4 | yes | yes | 36 chars | no | no | alias |
+| DID, DOI | yes | yes | long | no | no | alias; the owner level |
+| Content hash | yes | **no** (changes on edit) | long | no | no | proof only (E4) |
+
+### What can be the primary label
+
+On disk it must be a valid file name: no `/`, none of Windows' `< > : " \ | ? *`.
+So a URL can't be a label. A pointer goes in the pointer slot, and the label
+can be a short name that resolves to it. The design already does this once:
+`'path` storage makes the folder a symlink, a pointer where contents would be.
+
+### The rule
+
+- **Folder name** = primary local identity + space + primary label
+  (`11.11 Passport`). Nothing else.
+- **Root folder** = the system (and, once shared, the owner).
+- **Everything else** (aliases, other labels, pointers, proofs) lives in the
+  metadata layer: the JDex, `.jd.ncl`, or a Gordian Envelope. That layer is
+  where the shared network and the generated world from the ChatGPT threads
+  attach.
+
+**Verdict:** the four-slot split is worth adopting in the formal model now; it
+costs nothing on disk. The owner level waits until a system is shared.
+
 ## Open
 
 1. E2 color: test whether people can see the groupings. Render one real JD
