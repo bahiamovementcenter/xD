@@ -11,7 +11,7 @@ The patterns are chosen against these jobs, all from the formal model and
 the earlier design work:
 
 1. Hold the **config** (Nickel configuration), compare it with the
-   **disk state** (folders, JDex, apps) and change one to match the
+   **current state** (folders, JDex, apps) and change one to match the
    other, in either direction: a config edit or a disk edit.
 2. Never lose identity: the number is the identity, and retired numbers are
    never reused (formal 1.3, 1.4).
@@ -36,11 +36,11 @@ that way: every new feature first asks "which part is a pure function?".
 
 **Adopt: yes (already).**
 
-### Reconciliation: config, disk state and last applied
+### Reconciliation: config, current and last applied
 
 A [Kubernetes controller](https://kubernetes.io/docs/concepts/architecture/controller/)
 is "a non-terminating loop that regulates the state of a system": it
-compares desired with observed state (xD calls them config and disk state) and acts to close the gap. Terraform's
+compares desired with observed state (xD calls them config and current) and acts to close the gap. Terraform's
 [`plan`](https://developer.hashicorp.com/terraform/cli/commands/plan) does
 the same once, on request. `kubectl apply` adds a third input, the
 `last-applied-configuration`, so it can tell "the user removed this from the
