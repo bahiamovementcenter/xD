@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 98178c27ce8ba4d12954ef3459394938c7b4fd16641f6e92987ff74c248933e3 # macOS CI: base 37, areas `A` (10) and `a` (36) are one folder on a case-insensitive disk

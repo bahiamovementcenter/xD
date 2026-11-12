@@ -49,6 +49,15 @@ fn scheme_and_addresses() -> impl Strategy<Value = (Scheme, Vec<Address>)> {
         })
 }
 
+/// Whether the disk holding `dir` treats `a` and `A` as the same name.
+fn case_insensitive(dir: &std::path::Path) -> bool {
+    let probe = dir.join("case-probe");
+    fs::create_dir(&probe).unwrap();
+    let insensitive = dir.join("CASE-PROBE").exists();
+    fs::remove_dir(&probe).unwrap();
+    insensitive
+}
+
 /// `PROPTEST_CASES` when set (the weekly CI run), otherwise `default`.
 fn cases(default: u32) -> u32 {
     std::env::var("PROPTEST_CASES")
@@ -64,7 +73,15 @@ proptest! {
     fn folders_round_trip((s, addresses) in scheme_and_addresses()) {
         s.validate().unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let wanted: BTreeSet<Address> = addresses.into_iter().collect();
+        let mut wanted: BTreeSet<Address> = addresses.into_iter().collect();
+        // On a case-insensitive disk (macOS, Windows), numbers that differ
+        // only in case are one folder: portability() warns about exactly
+        // that, and case_collisions_are_real_where_reported checks the
+        // warning. Here, keep one number per folder.
+        if case_insensitive(dir.path()) {
+            let mut seen = BTreeSet::new();
+            wanted.retain(|a| seen.insert(a.render(&s).unwrap().to_lowercase()));
+        }
         for a in &wanted {
             fs::create_dir(dir.path().join(name::render(&s, a, Some("Label")).unwrap())).unwrap();
         }
@@ -182,8 +199,7 @@ fn base58_alphabet_works() {
 #[test]
 fn case_collisions_are_real_where_reported() {
     let dir = tempfile::tempdir().unwrap();
-    fs::create_dir(dir.path().join("probe")).unwrap();
-    let case_insensitive = dir.path().join("PROBE").exists();
+    let case_insensitive = case_insensitive(dir.path());
 
     // base62: `a` (36) and `A` (10) differ only in case.
     let s = scheme_for(62);
