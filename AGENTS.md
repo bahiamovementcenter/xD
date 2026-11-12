@@ -7,6 +7,9 @@ is one configuration and the default; the core must not assume it.
   gets an ADR with it. The formal model is `docs/jd-formal.md`; ideas that aren't JD are
   in `docs/jd-experiments.md`.
 - Defaults follow the Johnny.Decimal spec (johnnydecimal.com), not the `jd` CLI.
+- A new extension point follows `docs/extensibility.md`: the cheapest mechanism that
+  works, no trait or plugin interface before a second implementation, and the sealed
+  rules there stay sealed unless an ADR changes them.
 - Keep the core pure: no file system access outside the apply step and tests' temporary
   directories.
 

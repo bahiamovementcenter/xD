@@ -56,3 +56,11 @@ fn rust_validation_catches_what_contracts_dont() {
     let path = write(r#"(import "jd.ncl") & { scheme.base | force = 40 }"#);
     assert!(matches!(load(&path), Err(LoadError::Scheme(_))));
 }
+
+#[test]
+fn systems_are_open_but_schemes_are_closed() {
+    let path = write(r#"(import "jd.ncl") & { owner = "Ash" }"#);
+    assert!(load(&path).is_ok());
+    let path = write(r#"(import "jd.ncl") & { scheme.seperator = "." }"#);
+    assert!(matches!(load(&path), Err(LoadError::Nickel(_))));
+}

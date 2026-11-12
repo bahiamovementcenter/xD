@@ -41,7 +41,11 @@ let NonEmptyString = std.contract.from_predicate (fun s => std.is_string s && s 
       | doc "From the top of the tree down.",
   },
 
+  # Open (`..`): a system may carry fields of its own that xD ignores
+  # (docs/extensibility.md, "Unsealed classes"). Scheme and Level stay
+  # closed so a misspelled field is an error.
   System = {
     scheme | Scheme,
+    ..
   },
 }

@@ -5,7 +5,8 @@ Extensible Decimal: a library of composable primitives to construct organization
 Johnny.Decimal is one configuration built from it, and the default. How xD is built is
 recorded in [docs/adr/0001-architecture.md](docs/adr/0001-architecture.md); the primitives
 are described in [docs/jd-formal.md](docs/jd-formal.md) and
-[docs/jd-experiments.md](docs/jd-experiments.md).
+[docs/jd-experiments.md](docs/jd-experiments.md). How it's meant to be extended, and what
+is deliberately fixed, is in [docs/extensibility.md](docs/extensibility.md).
 
 ## Crates
 
