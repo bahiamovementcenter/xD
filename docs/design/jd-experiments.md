@@ -254,6 +254,50 @@ grammar can adopt only one of them.
 typing. A tool could accept plain E5 shorthand, use E6 to disambiguate, and
 print E7 when it must be exact. Undecided.
 
+## E8. Dot entries: `11..<convention>`
+
+A hidden file or folder inside any node, written as the node's number, the
+level separator `.`, then the hidden name with its own leading `.`:
+
+| Shorthand | Path | Owned by |
+| --- | --- | --- |
+| `11..jd.ncl` | `11 Me/.jd.ncl` | this repo's distributed config |
+| `11.12..git` | `11 Me/11.12 Website/.git` | git, for `'repo` storage |
+| `10-19..stfolder` | `10-19 Life admin/.stfolder` | Syncthing |
+| `00.00..obsidian` | `00-09 …/00 …/00.00 JDex/.obsidian` | a note app |
+
+This makes them a **third kind of child**, alongside IDs and `+` children:
+
+| Child | Numbered | Shown in a file manager | Owned by |
+| --- | --- | --- | --- |
+| ID (`11.11`) | yes | yes | the person |
+| `+` child (`11.11+ Wendy`) | no | yes | the person |
+| dot entry (`11.11..git`) | no | no | a tool or convention |
+
+- **Parsing is unambiguous.** After a number, `.` is followed either by digits
+  (the next level) or by another `.` (a dot entry). A number never starts
+  with `.`.
+- **jd already skips them.** A dot name isn't `11.11` or `11.11 *`, so
+  formal 1.5's `parse` maps it to `skip`. This repo's `stray_dotfile` warning
+  is a rule about one of them (`.jd.ncl`) appearing in the wrong place.
+- **Formally:** a set of entries keyed by `(n, name)`, where `name` starts
+  with `.`, outside the number space, and never in the JDex. A registry of
+  known conventions (`.jd.ncl`, `.git`, `.stfolder`, …) can say which tool owns
+  each one and which levels it may appear at.
+
+**Clashes to watch:**
+
+- `..` means "parent folder" in paths. A dot entry is shorthand, never a path,
+  so the two only meet if shorthand is typed where a path is expected.
+- `..` is a range in Rust, Ruby and bash (`{11..19}`). If E6's `{ }` sets ever
+  allow ranges, `11.{11..19}` would mean IDs `11.11`–`11.19`, not a dot entry.
+  The `{ }` context keeps it distinguishable, but E6 should pick a different
+  range syntax (e.g. `11.{11-19}`, reusing `-`) to keep `..` single-purpose.
+
+**Verdict:** worth adding to the shorthand grammar. It names things the design
+already has, costs no number space, and gives tool-owned metadata a place next
+to the node it describes.
+
 ## Open
 
 1. E2 color: test whether people can see the groupings. Render one real JD
