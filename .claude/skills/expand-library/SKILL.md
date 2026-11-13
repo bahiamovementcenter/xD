@@ -72,4 +72,5 @@ One capability per pull request.
 - Never merge. Never lower the two-config rule, mark a capability built
   without both configs passing, or mark one `grandfathered`.
 - If `nickel/xd.ncl`'s file layout or field names change, tell the user:
-  rust-nickel vendors a copy.
+  rust-nickel pins the `xd` package by commit and will need its pin moved
+  and its uses checked.

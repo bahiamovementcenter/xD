@@ -101,8 +101,9 @@ has its first: `examples/dewey.ncl` (`516.375`), which fails with
 - An unbuilt feature fails loudly instead of being ignored.
 - Adding a capability code to `xd.ncl` without registering it fails CI, so
   the registry can't drift from the library.
-- rust-nickel vendors `xd.ncl`; this changes its error messages and slot
-  contract but not its file layout or field names.
+- rust-nickel pins the `xd` Nickel package by commit; this changes its
+  error messages and slot contract but not its file layout or field names,
+  so moving the pin is enough.
 
 ## Open
 
