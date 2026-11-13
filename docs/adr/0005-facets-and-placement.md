@@ -146,12 +146,49 @@ plan moves what's already archived to its new place").
 | `unknown-root` | `root` returns a name not in `roots` |
 | `placement-collision` | two entries resolve to the same path |
 | `slot-missing` | `'into_slot` or `'last_slot` where the system lacks the reserved numbers |
+| `entry-form` | an entry of the wrong shape that wrapping can't fix (a folder in a `'file` space) |
 
 The first four and `unknown-root` are Nickel contracts, so they fail at
 evaluation. `placement-collision` and `slot-missing` need every entry and
 are checked by the core's `check` (ADR 0003).
 
-### 8. PARA is a preset of both
+### 8. Entry form: folder, file, or either
+
+Each number space says what shape its entries take on disk:
+
+```nickel
+entry_form = 'folder                  # or 'file, or 'either
+wrap = { name = 'file_stem }          # how a lone file becomes a folder
+```
+
+- **`'folder`**: every entry is a folder. A lone file placed as an entry
+  (dropped into a PARA bucket, or adopted, ADR 0003) is wrapped: the plan
+  creates a folder named by `wrap` and moves the file into it,
+  `Lease 2026.pdf` → `Lease 2026/Lease 2026.pdf`. Wrapping is a planned
+  `CreateFolder` and `Move`, so it is shown first and can be undone.
+- **`'file`**: every entry is a single file; a folder found as an entry is
+  reported, not changed.
+- **`'either`**: both are accepted as they are.
+
+`wrap.name` is `'file_stem` (the file's name without its extension) by
+default; `'file_name` keeps the extension. A finding `entry-form` reports an
+entry of the wrong shape that the plan can't fix by wrapping.
+
+The library declares the mechanism; units set it with `| default`, and a
+consumer's merge overrides it, per space and, through decision 3's
+inheritance, per area, category or entry:
+
+| Unit | Default |
+| --- | --- |
+| JD | `'folder`: every ID is a folder, as the JD docs describe |
+| Work packages | `'folder` |
+| PARA | `'folder`, so a lone file in a bucket is wrapped |
+
+With `'folder` everywhere, a hidden identity (ADR 0006) always has a folder
+to hold its marker; sidecars are only needed where a consumer chooses
+`'file` or `'either`.
+
+### 9. PARA is a preset of both
 
 `para.ncl` (not part of this record) will set:
 
@@ -160,7 +197,8 @@ are checked by the core's `check` (ADR 0003).
 - roots `projects`, `areas`, `resources`, `archives`, with `root` from the
   `para` label, and archived entries to `archives`;
 - layouts: `'mirrored` for the JD tree, `'flat` for work packages and for
-  PARA alone.
+  PARA alone;
+- `entry_form = 'folder` (decision 8).
 
 PARA's default for its Archives is therefore `'separate_root` into one
 `Archives/` root, each item keeping its path. The bucket an item came from
