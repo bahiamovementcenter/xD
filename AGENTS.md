@@ -13,6 +13,30 @@ is one configuration and the default; the core must not assume it.
 - Keep the core pure: no file system access outside the apply step and tests' temporary
   directories.
 
+## Expanding the library
+
+When a configuration fails with `capability '<code> isn't built yet`, the
+library lacks something the system needs. Don't work around it in the
+configuration. Follow `.claude/skills/expand-library/SKILL.md` (ADR 0007):
+
+1. Look `<code>` up in `nickel/capabilities.ncl`.
+2. Write the system you're working on as a config in `nickel/examples/`,
+   and add it to the capability's `configs`. It fails with that code.
+3. If the capability now has one config, stop: it's recorded, and waits for
+   a second consumer. Tell the user it's deferred and why.
+4. If it already had one, or a system in its `known` list fits, write that
+   one as a second config too. Two configs mean it's time to build it, and
+   `cargo test` says so until it's built.
+5. Build it: an ADR first (or extend the one named in `adr`), then the
+   cheapest mechanism in `docs/extensibility.md` that serves both configs,
+   then mark it `'built` and make both configs pass. One capability per pull
+   request.
+
+A system only counts once it is a config: a name in `known` is a candidate,
+not a consumer. Anything that would change a sealed rule in
+`docs/extensibility.md` stops at the ADR for the owner's approval, and an
+agent never merges.
+
 ## Build and test
 
 From `nix develop`:
@@ -21,7 +45,7 @@ From `nix develop`:
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-nickel format nickel/*.ncl && nickel typecheck nickel/jd.ncl   # when Nickel files change
+nickel format nickel/*.ncl nickel/examples/*.ncl && nickel typecheck nickel/jd.ncl   # when Nickel files change
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same in the Nix dev shell. Testing is described

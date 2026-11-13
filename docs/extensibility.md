@@ -27,6 +27,11 @@ In xD the mechanisms, cheapest first:
 A new extension point starts on the lowest rung that covers it. A need that
 only one person has stays on rung 1 or 2 until a second one appears.
 
+For the Nickel library this is mechanical (ADR 0007): each missing feature
+has a capability code in `nickel/capabilities.ncl`, a use counts only once
+it is written as a config there, and a second config makes CI say it's time
+to build it.
+
 ## Guideline by guideline
 
 ### Unsealed classes: open by default
