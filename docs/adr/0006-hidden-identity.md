@@ -103,6 +103,25 @@ It is the per-folder metadata file the workflow rules call `.jd.ncl`,
 renamed for xD; other per-folder fields go in the same file rather than a
 second one.
 
+The marker's file name is configurable, `store.marker = { file = ".xd.ncl" }`,
+for hosts that forbid or hide leading dots differently. That has
+consequences, each handled here:
+
+- **`scan` needs the name before it walks.** It reads the system's
+  configuration first (it already does, to find `.xd/`), so a marker is
+  never mistaken for user content and adopted.
+- **The name must be inert.** A contract checks it is a valid file name and
+  that every pattern in the system parses it to `skip` (formal 1.5), so a
+  marker can never be read as an entry.
+- **Changing it is a plan.** Every marker is renamed by a `Rename` step, so
+  the change can be checked and undone like any other (ADR 0002). Until the
+  plan is applied, readers accept both names.
+- **Nested systems** may use different names. Each reads only its own, and a
+  folder holding another system's `.xd/` is that system's root, and `scan`
+  should skip it as it skips its own `.xd/` (ADR 0003).
+- **The format is not configurable.** It is always a Nickel record, so any
+  host that embeds Nickel can read it.
+
 Not adopted, for now:
 
 - **Extended attributes**: many sync tools, archives and file systems drop
@@ -172,5 +191,3 @@ round-trip the store.
 - Whether `'name` should also allow a later switch to `'hidden` (a
   migration plan that writes markers for every entry).
 - Reading identities already present in file metadata (front matter, XMP).
-- Whether the marker's file name should be configurable for hosts that
-  forbid leading dots.
