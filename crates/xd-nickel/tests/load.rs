@@ -8,6 +8,12 @@ fn jd_ncl_is_the_jd_scheme() {
     assert_eq!(system.scheme, jd::scheme());
 }
 
+#[test]
+fn work_packages_stack_on_jd_without_changing_its_scheme() {
+    let path = write(r#"(import "jd.ncl") & (import "work-packages.ncl")"#);
+    assert_eq!(load(&path).unwrap().scheme, jd::scheme());
+}
+
 fn write(src: &str) -> tempfile::TempPath {
     let file = tempfile::Builder::new().suffix(".ncl").tempfile().unwrap();
     fs::write(file.path(), src).unwrap();
