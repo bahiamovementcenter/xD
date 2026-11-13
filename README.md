@@ -25,6 +25,8 @@ the design builds on are in [docs/design-patterns.md](docs/design-patterns.md).
   Nickel can use them: `(import "jd.ncl").pattern.parse "11.11 Passport"`.
 - [`nickel/jd.ncl`](nickel/jd.ncl): Johnny.Decimal, the default configuration. Build on it
   with a merge, e.g. `(import "jd.ncl") & { scheme.base | force = 16 }`.
+- [`nickel/Nickel-pkg.ncl`](nickel/Nickel-pkg.ncl): `nickel/` is the Nickel package `xd`;
+  its entry point [`main.ncl`](nickel/main.ncl) gives the primitives and `units`.
 - [`nickel/work-packages.ncl`](nickel/work-packages.ncl): work packages as a unit of their
   own, or stacked on a system so they link to its numbers:
   `(import "jd.ncl") & (import "work-packages.ncl")`.

@@ -104,7 +104,18 @@ the units below it and adds its own fields:
   its projects can be work packages; without JD, it still has its four
   buckets.
 
-### 5. Deliberately left out
+### 5. Published as a Nickel package
+
+`nickel/` is a Nickel package named `xd` (`Nickel-pkg.ncl`, version
+0.1.0). Its entry point, `main.ncl`, is `xd.ncl` plus `units` (`jd`,
+`work_packages`), so a host that embeds Nickel pins xD at a commit through
+nickel-embed's package support and writes `let xd = import xd in ...`,
+with no copy of the files. nickel-embed bundles it that way. A change to
+the entry point's shape, the units' field names (`pattern`,
+`work_packages`, `scheme`) or `parse`'s result is a breaking change of the
+package.
+
+### 6. Deliberately left out
 
 Each waits for its second use (docs/extensibility.md):
 
@@ -116,9 +127,6 @@ Each waits for its second use (docs/extensibility.md):
 - Code lists (facets) and placement roots, for the PARA unit.
 - Teaching the core per-slot alphabets, links and literals after the last
   slot. Until then those patterns are Nickel-only.
-- Publishing `xd.ncl` as a Nickel package (`Nickel-pkg.ncl`), so hosts can
-  `import xd` through nickel-embed's package support instead of an import
-  path.
 
 ## Consequences
 

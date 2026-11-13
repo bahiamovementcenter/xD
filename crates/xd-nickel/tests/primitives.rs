@@ -204,3 +204,19 @@ fn malformed_patterns_are_rejected() {
         assert!(e.contains(says), "{parts}: expected `{says}` in\n{e}");
     }
 }
+
+#[test]
+fn the_package_entry_point_has_the_primitives_and_units() {
+    // `import xd` loads main.ncl (nickel/Nickel-pkg.ncl): programs that pin
+    // the package rely on this shape.
+    let src = r#"let xd = import "main.ncl" in
+[
+  xd.units.jd.pattern.parse "11.11 X" == { address = [1, 1, 11], label = "X" },
+  (xd.units.jd & xd.units.work_packages).work_packages.parse "W0012~11.13"
+    == { address = [12], link = [1, 1, 13] },
+  (xd.pattern [xd.slot { name = "a", width = 1 }]).render [7] == "7",
+] |> std.test.assert_all"#;
+    assert_eq!(eval(src).unwrap(), json!(true));
+    let manifest = std::fs::read_to_string(library_dir().join("Nickel-pkg.ncl")).unwrap();
+    assert_eq!(eval(&manifest).unwrap()["name"], json!("xd"));
+}
