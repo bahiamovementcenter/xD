@@ -1,0 +1,68 @@
+# Runs the checks AGENTS.md lists, in the same Nix dev shell people use, so a
+# pass here means a pass in `nix develop`. docs/reference/ holds vendored
+# Nickel docs whose examples fail on purpose: nothing here reads it.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly: the long property run (docs/testing.md, "Targets").
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Lint and test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the dev shell
+        run: nix develop --command true
+      - name: Rust formatting
+        run: nix develop --command cargo fmt --check
+      - name: Clippy
+        run: nix develop --command cargo clippy --all-targets -- -D warnings
+      - name: Tests
+        run: nix develop --command cargo test
+      - name: Nickel formatting and types
+        run: |
+          nix develop --command nickel format --check nickel/*.ncl
+          for f in nickel/*.ncl; do nix develop --command nickel typecheck "$f"; done
+      - name: Flake
+        run: nix flake check
+
+  macos:
+    # macOS disks are case-insensitive by default: the folder tests and the
+    # portability() warnings are only checked for real here.
+    name: Test (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: Swatinem/rust-cache@v2
+      - name: Tests
+        run: nix develop --command cargo test
+
+  long-properties:
+    name: Long property run
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: Swatinem/rust-cache@v2
+      - name: Property tests, 10,000 cases each
+        run: nix develop --command cargo test --release
+        env:
+          PROPTEST_CASES: "10000"
