@@ -85,7 +85,7 @@ to the entry and reads from all of them:
 | `'sidecar` | a file `<name>.xd.ncl` beside the entry | single files |
 | `'suffix` | a visible suffix in the name, `Website redesign ·k3f9q2m1x0` | anything; makes the identity shown |
 
-The default is `['marker, 'sidecar]`. Under the default entry form (`'folder`, ADR 0005 decision 8) every entry is a folder, so the marker is used; the sidecar matters only where a consumer allows single-file entries. The index (`entries.json`, ADR 0003)
+The default is `['marker, 'sidecar]`. Under the default entry form (`'folder`, ADR 0005 decision 9) every entry is a folder, so the marker is used; the sidecar matters only where a consumer allows single-file entries. The index (`entries.json`, ADR 0003)
 always holds every identity as a cache, but is never the only copy.
 
 The marker is a Nickel record, so it can be checked later:
