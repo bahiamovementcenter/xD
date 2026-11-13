@@ -77,10 +77,14 @@ pub enum SchemeError {
     RangeSeparator,
     #[error("a scheme needs at least one level")]
     NoLevels,
+    #[error("a level has no name")]
+    LevelName,
     #[error("level `{0}` has width 0")]
     Width(String),
     #[error("level `{0}` holds more values than fit in 32 bits")]
     TooWide(String),
+    #[error("a full address holds more values than fit in 64 bits")]
+    TooLarge,
     #[error("level `{0}` is written as a range but has no level below it")]
     RangeWithoutChildren(String),
     #[error("level `{0}`'s separator may not contain digits, spaces or the range separator")]
@@ -136,13 +140,21 @@ impl Scheme {
         if self.levels.is_empty() {
             return Err(SchemeError::NoLevels);
         }
+        // Address::to_integer packs every level into one u64.
+        let mut total: u64 = 1;
         for (i, level) in self.levels.iter().enumerate() {
+            if level.name.is_empty() {
+                return Err(SchemeError::LevelName);
+            }
             if level.width == 0 {
                 return Err(SchemeError::Width(level.name.clone()));
             }
             if self.base.checked_pow(level.width).is_none() {
                 return Err(SchemeError::TooWide(level.name.clone()));
             }
+            total = total
+                .checked_mul(u64::from(self.base).pow(level.width))
+                .ok_or(SchemeError::TooLarge)?;
             if level.range && i + 1 == self.levels.len() {
                 return Err(SchemeError::RangeWithoutChildren(level.name.clone()));
             }

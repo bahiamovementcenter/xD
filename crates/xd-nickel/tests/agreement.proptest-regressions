@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc b4b854a662c3ae67e5e2184406fbd7b6b272a702d874bde6e24a6e271f5b29cf # shrinks to s = Scheme { base: 2, alphabet: None, range_separator: "-", levels: [Level { name: "", width: 1, separator: "", range: false }] }

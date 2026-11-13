@@ -21,7 +21,10 @@ fn a_system_can_build_on_jd() {
     let system = load(&path).unwrap();
     let s = system.scheme;
     assert_eq!(s.base, 16);
-    assert_eq!(Address::new(&s, vec![1]).unwrap().render(&s), "10-1F");
+    assert_eq!(
+        Address::new(&s, vec![1]).unwrap().render(&s).unwrap(),
+        "10-1F"
+    );
 }
 
 #[test]
@@ -39,7 +42,10 @@ let xd = import "xd.ncl" in
 "#,
     );
     let s = load(&path).unwrap().scheme;
-    assert_eq!(Address::new(&s, vec![57, 0]).unwrap().render(&s), "z.11");
+    assert_eq!(
+        Address::new(&s, vec![57, 0]).unwrap().render(&s).unwrap(),
+        "z.11"
+    );
 }
 
 #[test]

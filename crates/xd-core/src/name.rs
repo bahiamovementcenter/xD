@@ -1,6 +1,6 @@
 //! The folder-name projection (formal 1.5): `11.11 Passport` and back.
 
-use crate::address::Address;
+use crate::address::{Address, AddressError};
 use crate::scheme::Scheme;
 
 /// What a name means to the system.
@@ -17,12 +17,17 @@ pub enum Parsed {
 }
 
 /// Before the first space is identity; after it is a label you can change.
-pub fn render(scheme: &Scheme, address: &Address, label: Option<&str>) -> String {
-    let number = address.render(scheme);
-    match label {
+/// Fails only for an address that doesn't fit `scheme`.
+pub fn render(
+    scheme: &Scheme,
+    address: &Address,
+    label: Option<&str>,
+) -> Result<String, AddressError> {
+    let number = address.render(scheme)?;
+    Ok(match label {
         Some(label) if !label.is_empty() => format!("{number} {label}"),
         _ => number,
-    }
+    })
 }
 
 /// Accepts the number alone or the number, a space and a label. An empty

@@ -49,16 +49,41 @@ fn scheme_and_addresses() -> impl Strategy<Value = (Scheme, Vec<Address>)> {
         })
 }
 
+/// Whether the disk holding `dir` treats `a` and `A` as the same name.
+fn case_insensitive(dir: &std::path::Path) -> bool {
+    let probe = dir.join("case-probe");
+    fs::create_dir(&probe).unwrap();
+    let insensitive = dir.join("CASE-PROBE").exists();
+    fs::remove_dir(&probe).unwrap();
+    insensitive
+}
+
+/// `PROPTEST_CASES` when set (the weekly CI run), otherwise `default`.
+fn cases(default: u32) -> u32 {
+    std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
+
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(200))]
+    #![proptest_config(ProptestConfig::with_cases(cases(200)))]
 
     #[test]
     fn folders_round_trip((s, addresses) in scheme_and_addresses()) {
         s.validate().unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let wanted: BTreeSet<Address> = addresses.into_iter().collect();
+        let mut wanted: BTreeSet<Address> = addresses.into_iter().collect();
+        // On a case-insensitive disk (macOS, Windows), numbers that differ
+        // only in case are one folder: portability() warns about exactly
+        // that, and case_collisions_are_real_where_reported checks the
+        // warning. Here, keep one number per folder.
+        if case_insensitive(dir.path()) {
+            let mut seen = BTreeSet::new();
+            wanted.retain(|a| seen.insert(a.render(&s).unwrap().to_lowercase()));
+        }
         for a in &wanted {
-            fs::create_dir(dir.path().join(name::render(&s, a, Some("Label")))).unwrap();
+            fs::create_dir(dir.path().join(name::render(&s, a, Some("Label")).unwrap())).unwrap();
         }
         // A `+` child, a dot entry and a plain folder sit beside the numbers.
         for other in ["+ Wendy", ".jd.ncl", "Notes"] {
@@ -87,7 +112,7 @@ proptest! {
         let mut same: Vec<&Address> = addresses.iter().filter(|a| a.level() == level).collect();
         same.sort();
         same.dedup();
-        let mut names: Vec<String> = same.iter().map(|a| a.render(&s)).collect();
+        let mut names: Vec<String> = same.iter().map(|a| a.render(&s).unwrap()).collect();
         let rendered = names.clone();
         names.sort();
         prop_assert_eq!(names, rendered);
@@ -99,10 +124,10 @@ fn base64url_reads_its_own_dash_as_a_digit() {
     let s = scheme_for(64);
     let area = Address::new(&s, vec![62]).unwrap();
     // Digit 62 is `-` and 63 is `_`.
-    assert_eq!(area.render(&s), "-A~-_");
+    assert_eq!(area.render(&s).unwrap(), "-A~-_");
     assert_eq!(Address::parse(&s, "-A~-_"), Some(area));
     let id = Address::new(&s, vec![63, 62, 63 * 64 + 62]).unwrap();
-    assert_eq!(id.render(&s), "_-._-");
+    assert_eq!(id.render(&s).unwrap(), "_-._-");
     assert_eq!(Address::parse(&s, "_-._-"), Some(id));
 }
 
@@ -110,7 +135,7 @@ fn base64url_reads_its_own_dash_as_a_digit() {
 fn custom_alphabets_are_read_exactly() {
     let s = scheme_for(62);
     let id = Address::new(&s, vec![1, 36, 10]).unwrap();
-    assert_eq!(id.render(&s), "1a.0A");
+    assert_eq!(id.render(&s).unwrap(), "1a.0A");
     assert_eq!(
         Address::parse(&s, "1A.0A"),
         Some(Address::new(&s, vec![1, 10, 10]).unwrap())
@@ -162,7 +187,43 @@ fn base58_alphabet_works() {
     };
     s.validate().unwrap();
     let id = Address::new(&s, vec![0, 57, 58 * 58 - 1]).unwrap();
-    assert_eq!(id.render(&s), "1z.zz");
+    assert_eq!(id.render(&s).unwrap(), "1z.zz");
     assert_eq!(Address::parse(&s, "1z.zz"), Some(id));
     assert_eq!(Address::parse(&s, "1O.zz"), None, "no O in base58");
+}
+
+/// `portability()` is a claim about real disks: where it reports a case
+/// collision, two numbers really are one folder on a case-insensitive disk
+/// (macOS and Windows by default; CI runs this on macOS), and where it
+/// reports none, they never are.
+#[test]
+fn case_collisions_are_real_where_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    let case_insensitive = case_insensitive(dir.path());
+
+    // base62: `a` (36) and `A` (10) differ only in case.
+    let s = scheme_for(62);
+    assert!(
+        s.portability()
+            .contains(&Portability::CaseCollision('A', 'a'))
+    );
+    let upper = Address::new(&s, vec![1, 1, 10]).unwrap();
+    let lower = Address::new(&s, vec![1, 1, 36]).unwrap();
+    fs::create_dir(dir.path().join(upper.render(&s).unwrap())).unwrap();
+    let second = fs::create_dir(dir.path().join(lower.render(&s).unwrap()));
+    assert_eq!(second.is_err(), case_insensitive, "{second:?}");
+
+    // base36 with the default digits reports nothing, and every number of a
+    // level gets its own folder even on a case-insensitive disk.
+    let s = scheme_for(36);
+    assert!(s.portability().is_empty());
+    let ids = tempfile::tempdir().unwrap();
+    for id in 0..s.capacity(2) {
+        let a = Address::new(&s, vec![1, 1, id]).unwrap();
+        fs::create_dir(ids.path().join(a.render(&s).unwrap())).unwrap();
+    }
+    assert_eq!(
+        fs::read_dir(ids.path()).unwrap().count(),
+        s.capacity(2) as usize
+    );
 }

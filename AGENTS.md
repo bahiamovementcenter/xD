@@ -24,6 +24,11 @@ cargo test
 nickel format nickel/*.ncl && nickel typecheck nickel/jd.ncl   # when Nickel files change
 ```
 
+CI (`.github/workflows/ci.yml`) runs the same in the Nix dev shell. Testing is described
+in `docs/testing.md`: a promise of the formal model is a law in `crates/xd-conformance`,
+checked by property tests; a bug becomes a named test in `crates/xd-core/tests/regressions.rs`
+before it's fixed. `docs/reference/` is vendored and stays out of tests and formatting.
+
 ## Commits
 
 Short imperative subject starting with the area (`core: …`, `docs: …`), one logical
