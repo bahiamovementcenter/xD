@@ -5,3 +5,8 @@ members = ["crates/xd-core", "crates/xd-nickel", "crates/xd-conformance"]
 [workspace.package]
 edition = "2024"
 repository = "https://github.com/bahiamovementcenter/xD"
+
+# Nickel's interpreter is many times slower unoptimized, and xd-nickel's
+# tests evaluate a Nickel program per property case (docs/testing.md).
+[profile.dev.package.nickel-lang-core]
+opt-level = 3
