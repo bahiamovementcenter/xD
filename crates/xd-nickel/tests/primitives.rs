@@ -196,8 +196,15 @@ fn malformed_patterns_are_rejected() {
             "[xd.slot { name = \"area\", width = 1, range = true }]",
             "range",
         ),
-        ("[xd.slot { name = \"id\", width = 0 }]", "PosNat"),
+        (
+            "[xd.slot { name = \"id\", width = 0 }]",
+            "positive whole number",
+        ),
         ("[xd.slot { name = \"id\", width = 2, widht = 3 }]", "widht"),
+        (
+            "[xd.slot { name = \"id\", width = { min = 1 } }]",
+            "capability 'variable_width isn't built yet",
+        ),
     ] {
         let src = format!("let xd = import \"xd.ncl\" in (xd.pattern {parts}).render [0]");
         let e = eval(&src).unwrap_err().to_string();

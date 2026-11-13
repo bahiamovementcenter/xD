@@ -30,6 +30,42 @@ let has_duplicates = fun xs =>
   std.array.length (std.array.sort_dedup std.string.compare xs) != std.array.length xs
 in
 
+# A feature the library doesn't have yet fails with its capability code, so
+# an agent can look the code up in capabilities.ncl and follow AGENTS.md,
+# "Expanding the library" (ADR 0007). Every code used here must be listed
+# there; crates/xd-nickel/tests/capabilities.rs checks it.
+let unbuilt_message = fun code what => "capability '%{code} isn't built yet: %{what}" in
+let unbuilt_notes = [
+  "nickel/capabilities.ncl lists who else needs it; AGENTS.md, \"Expanding the library\", says what to do next."
+]
+in
+let unbuilt = fun code what => 'Error { message = unbuilt_message code what, notes = unbuilt_notes } in
+let Unbuilt = fun code what => std.contract.from_validator (fun _value => unbuilt code what) in
+
+let Width =
+  std.contract.from_validator (fun w =>
+    if std.is_record w then
+      unbuilt "variable_width" "a slot's width is a fixed number of digits, for now"
+    else if std.is_number w && std.number.is_integer w && w > 0 then
+      'Ok
+    else
+      'Error { message = "a slot's width is a positive whole number of digits" }
+  )
+in
+
+# Pattern parts that are planned but not built (survey, section 4).
+let unbuilt_kind = match {
+  'repeat => "repeat",
+  'cycle => "cycle",
+  'optional => "optional_parts",
+  'choice => "choice",
+  'enclose => "enclose",
+  'codes => "code_lists",
+  'check => "check_digits",
+  _ => null,
+}
+in
+
 let AlphabetIsUsable =
   std.contract.from_validator (fun a =>
     let folded = if a.fold_case then std.array.map std.string.lowercase a.digits else a.digits in
@@ -88,17 +124,18 @@ let alphabets' = {
 }
 in
 
-let Slot' = {
+let SlotRecord = {
   kind | [| 'slot |],
   name
     | std.string.NonEmpty
     | doc "What this level is called, e.g. \"area\".",
   width
-    | std.number.PosNat
+    | Width
     | doc "How many digits the slot holds.",
   alphabet
     | Alphabet'
     | doc "Which characters the digits are.",
+
   range
     | Bool
     | doc "Written as the span of its children, as JD writes area 1 as 10-19."
@@ -111,6 +148,34 @@ let Slot' = {
     = "-",
 }
 in
+
+# Slot fields that are planned (survey, section 4) but not built. A closed
+# record would reject them as unknown; this names the capability instead.
+let unbuilt_slot_fields = {
+  order = { code = "slot_order", what = "a slot sorts by its digits, for now" },
+  min = { code = "slot_order", what = "a slot holds every value its digits can write, for now" },
+  max = { code = "slot_order", what = "a slot holds every value its digits can write, for now" },
+  numeral = { code = "numeral_kinds", what = "a slot is a positional number with a zero digit, for now" },
+}
+in
+let NoUnbuiltSlotFields =
+  std.contract.from_validator (fun s =>
+    let found =
+      if std.is_record s then
+        unbuilt_slot_fields
+        |> std.record.to_array
+        |> std.array.filter (fun f => std.record.has_field f.field s)
+      else
+        []
+    in
+    if found == [] then
+      'Ok
+    else
+      let f = (std.array.first found).value in
+      unbuilt f.code f.what
+  )
+in
+let Slot' = std.contract.Sequence [NoUnbuiltSlotFields, SlotRecord] in
 
 let Text' = {
   kind | [| 'text |],
@@ -138,7 +203,10 @@ let PatternIsWellFormed =
     let slots = std.array.filter (fun p => kind_of p == 'slot) parts in
     let last_slot = std.array.fold_left (fun acc i => if std.array.at i kinds == 'slot then i else acc) (-1) (std.array.range 0 n) in
     let links = std.array.filter (fun i => std.array.at i kinds == 'link) (std.array.range 0 n) in
-    if !std.array.all (fun k => std.array.elem k ['slot, 'text, 'link, 'label]) kinds then
+    let unbuilt_kinds = kinds |> std.array.map unbuilt_kind |> std.array.filter (fun c => c != null) in
+    if unbuilt_kinds != [] then
+      unbuilt (std.array.first unbuilt_kinds) "a pattern is made of slots, text, links and labels, for now"
+    else if !std.array.all (fun k => std.array.elem k ['slot, 'text, 'link, 'label]) kinds then
       'Error {
         message = "a pattern is made of slots, text, links and labels",
         notes = ["Build its parts with xd.slot, xd.sep, xd.literal, xd.link and xd.label."],
@@ -435,13 +503,13 @@ in
           |> std.array.sort_dedup std.string.compare
         in
         if std.array.any (fun s => s.alphabet != a) slots then
-          std.fail_with "xD's core needs one alphabet for every slot, for now"
+          std.fail_with (unbuilt_message "core_mixed_alphabets" "xD's core needs one alphabet for every slot, for now")
         else if std.array.length range_separators > 1 then
-          std.fail_with "xD's core needs one range separator for every slot, for now"
+          std.fail_with (unbuilt_message "core_mixed_range_separators" "xD's core needs one range separator for every slot, for now")
         else if link != null then
-          std.fail_with "xD's core can't hold links yet"
+          std.fail_with (unbuilt_message "core_links" "xD's core can't hold links yet")
         else if trailing != [] && !(has_label && std.array.length trailing == 2 && label_text == " ") then
-          std.fail_with "xD's core only writes a space and a label after the number, for now"
+          std.fail_with (unbuilt_message "core_trailing_text" "xD's core only writes a space and a label after the number, for now")
         else
           {
             base = n,
@@ -564,8 +632,26 @@ in
   # Open (`..`): a system may carry fields of its own that xD ignores
   # (docs/extensibility.md, "Unsealed classes"). Scheme and Level stay
   # closed so a misspelled field is an error.
+  #
+  # The fields below are planned (ADR 0005, ADR 0006) but not built: setting
+  # one fails with its capability code instead of being silently ignored.
   System = {
     scheme | Scheme,
+    facets
+      | Unbuilt "facets" "facets are designed in ADR 0005"
+      | optional,
+    lifecycle
+      | Unbuilt "lifecycles" "lifecycles are designed in ADR 0005"
+      | optional,
+    placement
+      | Unbuilt "placement" "placement is designed in ADR 0005"
+      | optional,
+    entry_form
+      | Unbuilt "entry_form" "entry form is designed in ADR 0005"
+      | optional,
+    identity
+      | Unbuilt "hidden_identity" "hidden identity is designed in ADR 0006"
+      | optional,
     ..
   },
 }
