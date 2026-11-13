@@ -33,10 +33,6 @@
               nickel
               nushell
               jq
-              # BMAD (https://docs.bmad-method.org): the skills CLI and its scripts
-              nodejs
-              uv
-              python3
               git
             ];
           };
