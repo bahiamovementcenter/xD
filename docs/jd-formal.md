@@ -90,8 +90,9 @@ Each system keeps two sets: `Live` and `Retired`, with `Live ∩ Retired = ∅`.
 
 - **Allocate:** `next(c) ∈ {m : (c,m) ∉ Live ∪ Retired}`, also excluding the
   numbers that 2.1 reserves.
-- **Never reuse:** `Retired` only grows. Archiving or renumbering moves `n`
-  from `Live` to `Retired`. JD (the-jdex): "I never re-use IDs"; the JDex is
+- **Never reuse:** `Retired` only grows. Archiving moves `n` from `Live` to
+  `Retired`; renumbering (a move) frees `n` instead, since the entry lives on
+  at its new number (ADR 0003). JD (the-jdex): "I never re-use IDs"; the JDex is
   the master record of every ID assigned, which is what makes this checkable.
 - The *choice* inside `next` is a policy parameter. The JD docs only say IDs
   are "ordered in the sequence that you created them" (so in practice
