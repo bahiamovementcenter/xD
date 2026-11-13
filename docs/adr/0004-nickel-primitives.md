@@ -92,10 +92,12 @@ the units below it and adds its own fields:
 ```
 
 - `jd.ncl` defines `pattern` (JD's number) and `scheme`.
-- `work-packages.ncl` declares `pattern` without defining it and adds
-  `work_packages`: `W` and four digits, linked with `xd.link` to whatever
-  `pattern` the system below defines. It is tested stacked on JD and on a
-  hex system, and leaves the core's `scheme` unchanged.
+- `work-packages.ncl` adds `work_packages`: `W` and four digits. Alone, it
+  is a system of its own, and its scheme loads into the core (`W0012`).
+  Stacked on a system that defines `pattern`, such as JD, each work package
+  can link to one of that system's numbers with `xd.link` (`W0012~11.13`),
+  and the system's `scheme` stays the core's. It is tested alone, on JD and
+  on a hex system.
 - PARA is the next unit. It numbers nothing itself, so it needs no pattern
   primitive: it needs a bucket facet from a code list and folder roots
   chosen by it, which come with their own ADR. Stacked on work packages,

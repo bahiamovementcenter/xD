@@ -78,6 +78,9 @@ let with_child = xd.pattern (jd_parts @ [sep.child, slot { name = "child", width
   work_packages.parse "W0012~" == null,
   work_packages.write { address = [12], link = [1, 1, 13], label = "2026 tax return" } == "W0012~11.13 2026 tax return",
   work_packages.write (work_packages.parse "W0013~21.04 Kitchen") == "W0013~21.04 Kitchen",
+  # Alone, work packages are a system of their own, with no links.
+  let alone = (import "work-packages.ncl").work_packages in
+  alone.parse "W0012 Taxes" == { address = [12], label = "Taxes" } && alone.parse "W0012~11.13" == null,
   # A required link.
   let linked = xd.pattern [literal "W", slot { name = "wp", width = 4 }, xd.link { target = jd, required = true }] in
   linked.parse "W0001" == null && linked.parse "W0001~11.11" == { address = [1], link = [1, 1, 11] },
