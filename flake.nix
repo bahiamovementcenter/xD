@@ -33,6 +33,7 @@
               nickel
               nushell
               jq
+              bun
               git
             ];
           };
