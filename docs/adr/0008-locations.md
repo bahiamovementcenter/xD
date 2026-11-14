@@ -240,6 +240,42 @@ GitHub tree and blob URLs and purls are rendered for display and for
 release metadata where a host wants them, but never parsed back: they are
 not lossless.
 
+**Rules that make the URI round-trip**, since Nix's own parser is more
+lenient than a projection can be:
+
+- **A subset of Nix's grammar, written down in xD.** Flake references are
+  part of an experimental Nix feature and may change; xD's grammar is its
+  own, documented, and checked against Nix in tests, not borrowed by
+  reference. If they diverge, the record (decision 2a) still decides.
+- **Only Nix's attributes** (`ref`, `rev`, `dir`, `submodules`, `lfs`).
+  Nix rejects attributes it doesn't know, so anything xD adds (a release, a
+  condition, the entry's identity) lives in the record, never in the URI.
+  A URI stays a valid Nix input.
+- **No `github:` shorthand as the canonical form.** `github:o/r/feat/x`
+  can't say where a branch with `/` ends. It may be rendered for display.
+- **One canonical encoding**: names are Unicode NFC (macOS file systems
+  hand back NFD), and everything outside RFC 3986's unreserved characters
+  is percent-encoded, upper-case hex, so `11.13 Taxes` is
+  `11.13%20Taxes` and never `11.13+Taxes`. Two spellings of one location
+  are one location.
+- **`dir` may name a file.** Nix's `dir` is a directory, but an entry can be
+  a single file (ADR 0005 decision 9). The URI says what the path is; the
+  record says whether it is a folder or a file.
+- **Full commit ids only**, 40 hex characters for SHA-1 repositories and 64
+  for SHA-256 ones. Nickel's `GitId` accepts only the first, so xD's
+  contract accepts both.
+- **No credentials, ever.** User info with a token
+  (`https://user:token@host/…`) is rejected by the contract and stripped
+  when read, as the rest of xD deals in paths and never in secrets.
+- **The place is compared by host and repository, not by transport.**
+  `git+https://github.com/o/r` and `git+ssh://git@github.com/o/r` are the
+  same place; the transport is a local preference. A forge's own stable id
+  for a repository (GitHub's node id) is kept in the record, so a renamed or
+  transferred repository is drift to record (decision 6), not a new place.
+- **Places outside Git** use Nix's `path:` and `file:` forms; a place that
+  has no URI (a Claude project) stays a read-only adapter's value
+  (decision 4), with no URI of its own.
+
 ### 3. A location's condition follows the entry's state
 
 ADR 0005 keeps effects a closed set (`'retire`) and makes moves follow from
