@@ -210,7 +210,7 @@ The options compared:
 | --- | --- | --- |
 | GitHub tree/blob URL | `github.com/o/r/tree/feat/x/docs` | host-specific; can't tell where a branch with `/` ends and the path begins |
 | pip VCS URL | `git+https://host/o/r@v1#subdirectory=docs` | one `@` for branch, tag and commit alike; clashes with `user@host` in SSH URLs |
-| purl | `pkg:github/o/r@v1#docs` | names package *versions*; no branches or commits as such |
+| purl | `pkg:github/o/r@v1#docs` | `@version` is a commit or tag for the `github` type, and `#subpath` is a path, but the version is an opaque string: a tag and a commit look alike, and branches aren't versions ([github type](https://github.com/package-url/purl-spec/blob/main/docs/types/definitions/github-definition.md), spec clause 5.6.5) |
 | Nix flake reference | `git+https://host/o/r?ref=refs/heads/main&rev=<sha>&dir=docs` | none for this use |
 
 **xD uses the Nix flake reference form:**
