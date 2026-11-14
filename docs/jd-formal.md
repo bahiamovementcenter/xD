@@ -116,6 +116,11 @@ lossless on the number and is allowed to drop the label.
 Anything `parse` maps to `skip` is outside the system. That rule is what
 makes the extensions in section 2 possible without collisions.
 
+xD generalizes this (ADR 0006): a number space may keep its identity
+*hidden*, out of the name, in a marker file beside the entry. For such a
+space the projection is the name together with the marker, and the rule
+becomes "lossless on the identity". JD's numbers stay shown.
+
 ---
 
 ## 2. Modules (each optional; dependencies noted where they exist)
