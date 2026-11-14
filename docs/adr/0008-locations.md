@@ -65,6 +65,38 @@ its text parts (patterns are arrays, ADR 0004 decision 1, so this is
 separators, and a lowercased, hyphenated label: `-` is the only punctuation
 all three targets accept. A consumer overrides it per place.
 
+The swap happens only where a place needs it. `~` stays JD's link
+separator (formal 3.1, `sep.link` in ADR 0004) on disk and in the JDex; a
+branch is just another rendering of the same number, and `parse` on that
+rendering reads `-` back as the link.
+
+### 1a. Target rules are a reviewed registry
+
+Rules like these are scattered, change rarely but without notice, and are
+easy to get wrong from memory. So they are kept as data, the way Apple's
+[password-manager-resources](https://github.com/apple/password-manager-resources)
+keeps each website's password rules and quirks: one reviewed entry per
+target, each citing its source.
+
+`nickel/targets.ncl` holds, per target (`git_ref`, `github_repo`,
+`github_topic`, and the file systems placement already writes to:
+`posix`, `macos`, `windows`):
+
+- the characters allowed, and those allowed only in some positions
+  (a ref may not start with `-` or `.`, or end with `.lock`);
+- case: preserved, folded on comparison, or forced lower;
+- length limits;
+- reserved names (Windows' `CON`, `NUL` …);
+- `source`: the documentation or command the rule comes from
+  (`git check-ref-format`, GitHub's docs, Microsoft's naming rules);
+- `checked`: the date someone last confirmed it.
+
+The name contracts (`GitRefName`, `GitHubTopic` …) are built from these
+entries, so fixing a rule is a data change with no code. A quirk found in
+use (a host that rejects something its docs allow) is added as an entry
+with its evidence, as Apple's repository takes quirks. The entries are
+plain data, so a tool outside xD can read them too.
+
 The label in such a name is a slug, so writing it back loses the label's
 spelling. That is allowed: the sealed rule is that a projection is
 lossless *on the identity* (extensibility.md, ADR 0006 decision 8), and the
@@ -220,7 +252,7 @@ unchanged, with the adapter's reading as "current":
 
 | Code | When |
 | --- | --- |
-| `location-name` | a location's rendered name breaks its target's rules (decision 1) |
+| `location-name` | a location's rendered name breaks its target's rules (decisions 1 and 1a) |
 | `location-collision` | two entries resolve to the same place |
 | `location-unbound` | a required location has no binding |
 | `location-orphan` | a place carries the marker of an identity that is unknown or retired |
