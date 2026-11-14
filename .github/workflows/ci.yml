@@ -37,8 +37,9 @@ jobs:
         run: nix develop --command cargo test
       - name: Nickel formatting and types
         run: |
-          nix develop --command nickel format --check nickel/*.ncl
+          nix develop --command nickel format --check nickel/*.ncl nickel/examples/*.ncl
           for f in nickel/*.ncl; do nix develop --command nickel typecheck "$f"; done
+          for f in nickel/examples/*.ncl; do nix develop --command nickel typecheck -I nickel "$f"; done
       - name: Flake
         run: nix flake check
 

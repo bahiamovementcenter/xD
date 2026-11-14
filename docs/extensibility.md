@@ -27,6 +27,11 @@ In xD the mechanisms, cheapest first:
 A new extension point starts on the lowest rung that covers it. A need that
 only one person has stays on rung 1 or 2 until a second one appears.
 
+For the Nickel library this is mechanical (ADR 0007): each missing feature
+has a capability code in `nickel/capabilities.ncl`, a use counts only once
+it is written as a config there, and a second config makes CI say it's time
+to build it.
+
 ## Guideline by guideline
 
 ### Unsealed classes: open by default
@@ -131,7 +136,7 @@ seal when there is a concrete reason.
 | --- | --- |
 | The number is the identity; the label is not (formal 1.3) | Everything else (renames, links, history) depends on it |
 | Retired numbers are never reused (formal 1.4) | The JDex as a permanent record depends on it |
-| `parse(render(n)) = n` for every scheme (formal 1.5) | Folders must read back as what was written |
+| A projection is lossless on the identity: `parse(render(n)) = n` for every scheme, reading the entry's store too where identity is hidden (formal 1.5, ADR 0006) | Folders must read back as what was written |
 | The core does no I/O; only apply touches the disk, reversibly | Plans must be safe to compute and to undo |
 | `Scheme` and `Level` reject unknown fields | Typos must fail loudly |
 
