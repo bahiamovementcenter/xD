@@ -633,8 +633,9 @@ in
   # (docs/extensibility.md, "Unsealed classes"). Scheme and Level stay
   # closed so a misspelled field is an error.
   #
-  # The fields below are planned (ADR 0005, ADR 0006) but not built: setting
-  # one fails with its capability code instead of being silently ignored.
+  # The fields below are planned (ADRs 0005, 0006 and 0008) but not built:
+  # setting one fails with its capability code instead of being silently
+  # ignored.
   System = {
     scheme | Scheme,
     facets
@@ -651,6 +652,9 @@ in
       | optional,
     identity
       | Unbuilt "hidden_identity" "hidden identity is designed in ADR 0006"
+      | optional,
+    locations
+      | Unbuilt "locations" "locations are designed in ADR 0008"
       | optional,
     ..
   },
