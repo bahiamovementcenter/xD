@@ -119,7 +119,7 @@ locations = {
   },
   branch = git.branch {
     carries = 'name branch_pattern,                # the ID is in the name
-    repo = 'link 'repo,                            # the linked ID's repo
+    in = 'link 'repo,                              # the linked ID's repo
   },
 }
 ```
@@ -136,7 +136,7 @@ locations = {
   `xD` for `001.05`, is carried by a marker.
 - **`cardinality`** is `'one` or `'many`, as for facets (ADR 0005
   decision 2). A required location without a binding is `location-unbound`.
-- **`repo = 'link 'repo`** lets a place be found through a link: a work
+- **`in = 'link 'repo`** lets a place be found through a link (decision 2a): a work
   package's branch lives in the repository of the ID it links to
   (`W0012~11.13`, ADR 0004). Nothing else in xD names another space, so
   this is the only cross-space reference.
@@ -148,6 +148,97 @@ The core never runs a configuration's functions: Nickel evaluates each
 location's name and hands the core resolved values, as it does for
 placement. The core knows a location's name, kind and adapter tag, and
 nothing about Git.
+
+### 2a. Locations compose: a path, in a repository, at a point
+
+A folder isn't only on a disk. Ash's example (2026-11-14): the same folder
+can be in a Git repository, and in it at a branch, a tag or a release. So a
+location's address is not one string but up to three layers, each optional
+below the first:
+
+| Layer | Is | Examples |
+| --- | --- | --- |
+| **place** | where the bytes are kept | a disk root, a repository (`https://github.com/bahiamovementcenter/xD`) |
+| **point** | which version of the place | a branch, a tag, a release, a commit |
+| **path** | where inside it | `docs/adr`, `10-19 Life admin/11 Me/11.13 Taxes` |
+
+A location may be declared `in` another, which supplies the layers it
+doesn't name:
+
+```nickel
+locations = {
+  repo = forge.repo { … },                          # place
+  main = git.at { in = 'repo, point = 'Branch "main" },
+  folder = xd.location.folder { in = 'main },       # placement gives the path
+  branch = git.branch { in = 'repo, carries = 'name branch_pattern },
+}
+```
+
+With that, the work package's branch is a point with no path, the ID's
+folder is a path at `main` in its repository, and a local checkout is the
+same path at the point the working copy has checked out. Placement still
+computes only the path; the layers above it come from the location it is
+`in`. Cycles in `in` are a contract failure.
+
+**Points come in four kinds**, and they differ in whether they move:
+
+| Point | Moves? | Drift when it moves |
+| --- | --- | --- |
+| `'Branch name` | yes, that is its purpose | none: a branch moving is normal |
+| `'Tag name` | not by convention, though Git allows it | `location-point-moved` |
+| `'Release name` | a forge object pointing at a tag | as its tag; the forge adapter also checks the release exists |
+| `'Commit id` (a rev) | never: it is the content's hash | none possible |
+
+This is the shape Nickel itself uses for package sources
+(`std.package.GitDependency`: `url`, `ref = 'Head | 'Branch | 'Tag |
+'Commit GitId`, `path`), so xD follows it rather than inventing one, and
+adds `'Release` for forges. As in a lock file, a location bound by a moving
+or conventional name also **records the commit it resolved to** at the last
+apply. That pin is what three-way reconciliation compares (ADR 0002), and
+what undo restores a deleted ref to (decision 5).
+
+### 2b. One URI form, rendered from the record
+
+The canonical form of a location is the Nickel record above. Tools, links
+and logs also need it as one string, so each location renders to a URI and
+parses back, like a pattern: a URI is a projection, and must round-trip
+the location (not only the identity).
+
+The options compared:
+
+| Form | Example | Problem |
+| --- | --- | --- |
+| GitHub tree/blob URL | `github.com/o/r/tree/feat/x/docs` | host-specific; can't tell where a branch with `/` ends and the path begins |
+| pip VCS URL | `git+https://host/o/r@v1#subdirectory=docs` | one `@` for branch, tag and commit alike; clashes with `user@host` in SSH URLs |
+| purl | `pkg:github/o/r@v1#docs` | names package *versions*; no branches or commits as such |
+| Nix flake reference | `git+https://host/o/r?ref=refs/heads/main&rev=<sha>&dir=docs` | none for this use |
+
+**xD uses the Nix flake reference form:**
+
+```
+git+https://github.com/bahiamovementcenter/xD?ref=refs/heads/main&rev=0c0a82aa…&dir=docs/adr
+git+ssh://git@github.com/bahiamovementcenter/xD?ref=refs/tags/v0.1.0
+git+file:///home/me/src/xD?dir=10-19%20Life%20admin
+```
+
+- **`ref` takes the full ref name**, `refs/heads/…` or `refs/tags/…`, so a
+  branch and a tag of the same name can't be confused, and a `/` in a
+  branch name needs no escaping rules of its own.
+- **`ref` and `rev` together** say "this branch, last seen at this commit",
+  which is exactly the recorded pin; `rev` alone is an immutable point.
+- **`dir`** is the path, percent-encoded, so JD folder names with spaces
+  survive.
+- **Any Git host** works through `git+https`, `git+ssh` and `git+file`; the
+  scheme is the transport, not the forge.
+- **A release** renders as its tag's ref. That a release exists is the
+  forge adapter's business (decision 4), not the URI's.
+- Nix accepts these strings, so a location can be passed to a tool that
+  already reads flake references, and Nickel's `GitDependency` fields map
+  one to one (`url`, `ref`, `path` ↔ `dir`).
+
+GitHub tree and blob URLs and purls are rendered for display and for
+release metadata where a host wants them, but never parsed back: they are
+not lossless.
 
 ### 3. A location's condition follows the entry's state
 
@@ -253,13 +344,16 @@ unchanged, with the adapter's reading as "current":
 | Code | When |
 | --- | --- |
 | `location-name` | a location's rendered name breaks its target's rules (decisions 1 and 1a) |
+| `location-point-moved` | a tag or release now resolves to a different commit than the recorded pin (decision 2a) |
+| `location-cycle` | locations declared `in` each other |
+| `location-uri` | a URI that doesn't parse back to the same location |
 | `location-collision` | two entries resolve to the same place |
 | `location-unbound` | a required location has no binding |
 | `location-orphan` | a place carries the marker of an identity that is unknown or retired |
 | `location-condition` | an adapter is asked for a condition it doesn't support |
 | `location-read-only` | a plan would write to a read-only adapter's place |
 
-`location-name` and `location-condition` are Nickel contracts, so they fail
+`location-name`, `location-cycle` and `location-condition` are Nickel contracts, so they fail
 at evaluation. The others need every entry or the current state, and are
 checked by the core's `check` (ADR 0003).
 
@@ -286,11 +380,17 @@ ID, makes CI say it's time to build.
 - Tests: in `xd-conformance`, laws that every location name round-trips the
   identity; that location names are injective across live entries (else
   `location-collision`); that a plan of remote operations followed by its
-  inverse restores every location. Nickel assertions for the name contracts
+  inverse restores every location; that every location's URI parses back
+  to the same location. Nickel assertions for the name contracts
   in `nickel/tests/`.
 
 ## Open
 
+- An `xd:` URI for entries themselves (`xd:11.13`), so a link can name an
+  entry without naming a place; with a hidden alias (ADR 0006 decision 7)
+  it would survive renumbering.
+- Whether a location may name several points at once (an ID's folder on
+  every release), or one location per point.
 - Whether `'git` reads and writes refs through the `git` binary or a library
   (`gix`), and how it authenticates; whether `'forge` uses the host's API
   directly.
