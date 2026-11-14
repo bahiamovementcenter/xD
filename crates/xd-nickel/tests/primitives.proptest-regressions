@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 1d63e392091a9db8c66fdf52c7455c76236f588f34d399b9ee13075204680776 # shrinks to (s, addresses, labels, inputs) = (Scheme { base: 2, alphabet: None, range_separator: "~", levels: [Level { name: "bijcwtei", width: 2, separator: ".", range: false }, Level { name: "ctz", width: 1, separator: "_", range: false }] }, [Address([0])], ["&"], [])

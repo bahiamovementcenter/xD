@@ -53,7 +53,8 @@ moves to a scheduled job.
 | --- | --- |
 | `crates/xd-core/tests/` | examples for the core (`core.rs`), real folders for bases 2–64 (`folders.rs`), and every bug found so far, pinned by name (`regressions.rs`) |
 | `crates/xd-conformance/` | the conformance suite: generators (`strategies`) and laws (`laws`) anyone can call from their own `proptest!`, plus the suite run on generated schemes (`tests/laws.rs`) and the registry against a model (`tests/registry.rs`) |
-| `crates/xd-nickel/tests/` | loading, and the agreement test between the Nickel contracts and `Scheme::validate` (`agreement.rs`) |
+| `crates/xd-nickel/tests/` | loading, the agreement test between the Nickel contracts and `Scheme::validate` (`agreement.rs`), and the primitives' render and parse against the core's (`primitives.rs`) |
+| `nickel/tests/` | examples of the Nickel primitives as `std.test` assertions, run by `primitives.rs` |
 | `*.proptest-regressions` | seeds of real failures proptest found, committed so they run first |
 | `.github/workflows/ci.yml` | every check in `AGENTS.md` on Linux, `cargo test` on macOS, and a weekly run with `PROPTEST_CASES=10000` |
 
@@ -80,6 +81,8 @@ runs only on valid schemes.
 | JD allocates the first area as `10-19` | `jd_areas_are_allocated_after_the_system_area` | example |
 | Nickel contracts and `validate` agree: a scheme loads exactly when `validate` accepts it, and loads unchanged | `agreement.rs`, on valid schemes and on schemes with one thing broken | differential property |
 | `jd.ncl` is `xd_core::jd::scheme()`; open `System`, closed `Scheme` | `load.rs` | examples |
+| The Nickel primitives (ADR 0004) agree with the core: every scheme, written as a pattern, lowers back to itself, and renders, names and parses exactly as the core does, on rendered names and on number-like text | `primitives.rs` (`patterns_agree_with_the_core`, `jd_agrees_with_the_core`) | differential property |
+| Primitive examples: JD, work packages, mixed alphabets, links (PARA + JD projects), `write (parse s) = s` | `nickel/tests/primitives.ncl` | examples |
 
 The tests catch real mistakes: an off-by-one in reading digits
 (`v <= base`) fails `near_misses_are_rejected_or_canonical` on every run,
@@ -190,7 +193,8 @@ Five to ten tests in total.
   nothing is worst. Not set up yet; three hand-made mutants were checked
   (see "What's covered"), and one survived only because it was equivalent.
 - **Property cases**: 512 for the laws, 256 for the registry, 128 for the
-  Nickel agreement (each case evaluates a Nickel program), 200 for real
+  Nickel agreement and 64 for the primitives (each case evaluates a Nickel
+  program; `nickel-lang-core` is built optimized in dev for this), 200 for real
   folders; `PROPTEST_CASES` overrides all of them, and the weekly CI job
   sets 10,000. Seeds of real failures are committed next to each test file
   (`*.proptest-regressions`).

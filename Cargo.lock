@@ -1433,6 +1433,7 @@ dependencies = [
  "nickel-embed",
  "proptest",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "xd-conformance",

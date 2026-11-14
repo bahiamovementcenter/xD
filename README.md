@@ -19,9 +19,17 @@ the design builds on are in [docs/design-patterns.md](docs/design-patterns.md).
 
 ## Nickel
 
-- [`nickel/xd.ncl`](nickel/xd.ncl): the contracts a configuration is checked against.
+- [`nickel/xd.ncl`](nickel/xd.ncl): xD's primitives (alphabets, slots, separators, links,
+  labels, patterns; [ADR 0004](docs/adr/0004-nickel-primitives.md)), built on Nickel's
+  std, and the contracts a configuration is checked against. Any program that embeds
+  Nickel can use them: `(import "jd.ncl").pattern.parse "11.11 Passport"`.
 - [`nickel/jd.ncl`](nickel/jd.ncl): Johnny.Decimal, the default configuration. Build on it
   with a merge, e.g. `(import "jd.ncl") & { scheme.base | force = 16 }`.
+- [`nickel/Nickel-pkg.ncl`](nickel/Nickel-pkg.ncl): `nickel/` is the Nickel package `xd`;
+  its entry point [`main.ncl`](nickel/main.ncl) gives the primitives and `units`.
+- [`nickel/work-packages.ncl`](nickel/work-packages.ncl): work packages as a unit of their
+  own, or stacked on a system so they link to its numbers:
+  `(import "jd.ncl") & (import "work-packages.ncl")`.
 
 ## Development
 
