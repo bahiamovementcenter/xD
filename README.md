@@ -37,3 +37,10 @@ the design builds on are in [docs/design-patterns.md](docs/design-patterns.md).
 nix develop        # or direnv allow
 cargo test
 ```
+
+## Licence
+
+Copyright © 2026 Ash. Licensed under the
+[GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`).
+
+The Nickel manual and examples vendored in `docs/reference/nickel/` keep their own [MIT licence](docs/reference/nickel/LICENSE).

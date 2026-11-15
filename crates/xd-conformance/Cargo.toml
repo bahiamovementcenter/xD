@@ -3,6 +3,7 @@ name = "xd-conformance"
 version = "0.1.0"
 description = "The laws every xD scheme and projection must satisfy, as property tests anyone can run"
 edition.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [dependencies]
