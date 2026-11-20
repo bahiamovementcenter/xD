@@ -113,6 +113,11 @@ in
         adr = "0005",
         known = ["PARA", "JD"],
       },
+      file_system_targets = {
+        summary = "A configuration choosing a file system looser than `portable`, as Linux-only labels with `:`.",
+        status = 'deferred,
+        adr = "0009",
+      },
       hidden_identity = {
         summary = "An identity kept out of the name, generated and stored beside the entry.",
         status = 'proposed,

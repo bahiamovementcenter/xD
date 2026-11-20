@@ -105,8 +105,11 @@ and dropping the never-reuse check or the retired record fails
   "Lenses"), which needs `parse` to say whether a name was canonical.
 - **Diagnostics.** Nickel's error for a misspelled field should name it; a
   snapshot test of the message (`insta`) when errors get their final form.
-- **Windows.** CI runs Linux and macOS. Windows forbids characters
-  `portability()` reports; a Windows job when someone uses xD there.
+- **Windows and labels.** CI runs Linux and macOS, and only the number
+  part of a name is checked. ADR 0009 proposes checking labels against
+  `portable` (Windows, macOS and POSIX rules, NFC), comparing placed paths
+  case- and normalization-insensitively, and a Windows CI job; its
+  "Tests" section lists the tests to write with it.
 - **Fuzzing** with `cargo fuzz` on the parsers, once there's more parsing
   (the shorthand grammar, Org JDex). The `parse_never_panics` property
   covers today's.
