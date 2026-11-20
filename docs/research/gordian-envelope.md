@@ -240,6 +240,16 @@ and Rust computes and signs, handing back resolved values the way
 placement is resolved. Contracts can still check what is declarative:
 an audience names a known key, a `public` entry has no private-only facet.
 
+**The Rust side is nickel-embed** (rust-nickel), the single engine every
+host already goes through (Ash, 2026-11-20). Envelope support belongs there,
+behind a feature beside its `xd` feature: build, elide, encrypt, sign and
+verify an envelope from an evaluated Nickel value. Every host then gets it
+from one implementation: xD's Rust crates directly, Go through
+`nickel-embed-capi`, Gleam through its NIF, Python through a future binding.
+So "Rust-only" stops being a limit for xD's languages, because none of them
+needs a native Envelope library of its own. The Nickel library stays pure
+data: it declares what to hide and from whom, and the engine computes.
+
 Signing **configurations** themselves (a released `jd.ncl`, a preset
 someone depends on) is possible but weak: consumers pin the `xd` Nickel package by
 commit (ADR 0007, Consequences), and a Git commit with an SSH
@@ -371,8 +381,8 @@ as a config.
 | --- | --- | --- |
 | Maturity | Unaudited, pre-1.0, breaking renames between minor versions; drafts are Experimental and individual | Keep it behind an extension crate; pin the version; the core depends only on SHA-256 and a documented byte format |
 | Spec drift | dCBOR and Envelope may change before any RFC | C2 and C3 depend only on the digest construction, which the draft calls stable; changing the hash needs a new tag, so old digests stay readable |
-| Rust-only for xD's purposes | Rust, Swift, TypeScript; no Go, no Nickel, no WASM listed | xD is Rust, so the core is fine. Nickel declares policy only (A4). Go tools (xdg-agents, a future go-ncl) would read exports through xD's CLI, not compute digests |
-| Nickel engine can't verify | Nickel has `std.hash` on strings but no bytes or CBOR | Rust resolves, Nickel declares, as for placement |
+| Few implementations | Rust, Swift, TypeScript; no Go, no Nickel, no WASM listed | Lean on nickel-embed (A4): one Rust implementation behind the engine, reached from Go, Gleam and Python through its existing C API and NIF |
+| Nickel can't compute digests | Nickel has `std.hash` on strings but no bytes or CBOR | The engine resolves, Nickel declares, as for placement; the work lands in rust-nickel, outside xD |
 | Key loss | Losing the key loses every private record | SSKR shares across devices or people; keys in the OS keychain or hardware |
 | Revocation | Shared ciphertext can't be taken back | Forward-only removal by key rotation per edition; say so in the UI |
 | Leaks through structure | An elided part still shows that it exists and its digest; one signature correlates every view; a JD number itself reveals the tree (`11.13` under a health area) | Salt every private leaf; elide whole assertions, not only values; publish hidden aliases (ADR 0006) instead of numbers for private entries; per-audience salts where views must not be linked |
