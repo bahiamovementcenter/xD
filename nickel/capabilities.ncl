@@ -113,6 +113,12 @@ in
         adr = "0005",
         known = ["PARA", "JD"],
       },
+      locations = {
+        summary = "Other places an entry lives (a repository, a branch, a topic), each bound to an adapter.",
+        status = 'proposed,
+        adr = "0008",
+        known = ["JD across Claude projects, Git and GitHub (Ash)", "A team's repositories per ID"],
+      },
       hidden_identity = {
         summary = "An identity kept out of the name, generated and stored beside the entry.",
         status = 'proposed,
