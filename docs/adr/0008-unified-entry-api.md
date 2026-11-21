@@ -128,7 +128,7 @@ designed:
   projection writes, and checks that Org itself reads back the same
   identities (`CUSTOM_ID`, `:ID:`), labels, TODO states, tags and
   properties. The test is skipped where Emacs isn't installed; CI's Nix
-  shell provides it.
+  shell will need Emacs added.
 
 ### 5. Org rendering is a parameter, set by presets
 
