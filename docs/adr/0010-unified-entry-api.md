@@ -1,4 +1,4 @@
-# 8. One entry API over every layer and projection
+# 10. One entry API over every layer and projection
 
 Status: proposed, 2026-11-20.
 
