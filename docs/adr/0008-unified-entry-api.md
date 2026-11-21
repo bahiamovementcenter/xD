@@ -120,6 +120,15 @@ designed:
   folder projection stays concrete. Task apps (Things) and a Markdown JDex
   are later implementations of the same trait; a WIT interface waits for an
   outside implementer.
+- **The Org projection is Rust, in the core.** Reading and rendering Org
+  are pure functions over text, so they stay testable without Emacs and the
+  apply step keeps its journal, inverses and `jdex_changed` check.
+- **Emacs is the test oracle for it.** A conformance test runs
+  `emacs --batch` with only built-in `org-element` over what the Rust
+  projection writes, and checks that Org itself reads back the same
+  identities (`CUSTOM_ID`, `:ID:`), labels, TODO states, tags and
+  properties. The test is skipped where Emacs isn't installed; CI's Nix
+  shell will need Emacs added.
 
 ### 5. Org rendering is a parameter, set by presets
 
@@ -157,6 +166,24 @@ state; a GTD preset sets `org.todo = true`. A consumer overrides either.
 
 `transition-not-allowed`, `revive-retired` and the placement findings come
 from ADR 0005 unchanged.
+
+## Alternatives considered
+
+**An Emacs worker as the Org projection** (proposed 2026-11-21): a batch
+Emacs reading JSON lines on stdin and upserting headings with `org-id` and
+`org-element`, run natively or in the browser through container2wasm. Not
+chosen as the projection, because:
+
+- it writes without the `before` value or a file-hash check, so apply can't
+  invert it or raise `jdex_changed`, and a long-lived worker saves stale
+  buffers over edits made in the meantime;
+- it puts placement, TODO keywords and facet rendering in Elisp, where
+  decision 5 makes them preset parameters resolved by the core;
+- it makes Emacs a runtime dependency of every xD install; in the browser it
+  is a download of hundreds of MB with slow typing (workflow-rules.md).
+
+Its useful part, Emacs's own Org parser, is kept as the test oracle
+(decision 4).
 
 ## Consequences
 
